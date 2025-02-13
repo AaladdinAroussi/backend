@@ -82,10 +82,7 @@ private RoleRepository roleRepository ;
         return adminService.updateAdmin(admin, id);
     }
 
-    @DeleteMapping("delete/{id}")
-    public ResponseEntity<?> deleteAdmin(@PathVariable Long id) {
-        return adminService.delete(id);
-    }
+
 
     // Marquer une offre comme "pourvue" (Filled)
     @PutMapping("markFilled")

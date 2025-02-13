@@ -1,5 +1,6 @@
 package com.pfe.smsworkflow.Controllers;
 
+import com.pfe.smsworkflow.Services.CandidatService;
 import com.pfe.smsworkflow.Services.FavorisService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 public class CandidatController {
     @Autowired
     private FavorisService favorisService;
+    @Autowired
+    private CandidatService candidatService;
 
 
     // Favoris ENDPOINTS
@@ -26,6 +29,10 @@ public class CandidatController {
         return favorisService.delete(favorisId);
     }
 
-
+    // Supprimer un Candidat
+    @DeleteMapping("delete/{id}")
+    public ResponseEntity<?> deleteCandidat(@PathVariable Long id) {
+        return candidatService.delete(id);
+    }
 
 }

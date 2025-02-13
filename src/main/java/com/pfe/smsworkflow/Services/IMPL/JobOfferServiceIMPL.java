@@ -18,7 +18,8 @@ import java.util.stream.Collectors;
 public class JobOfferServiceIMPL implements JobOfferService {
     @Autowired
     private JobOfferRepository jobOfferRepository;
-
+    @Autowired
+    private SectorRepository sectorRepository;
     @Autowired
     private CompanyRepository companyRepository;
 
@@ -33,13 +34,15 @@ public class JobOfferServiceIMPL implements JobOfferService {
     private AdminRepository adminRepository ;
 
     // Créer une CategoryOffer
-    public ResponseEntity<?> create(JobOffer jobOffer, Long adminId, Long companyId, Long categoryOfferId, Long cityId) {
+    public ResponseEntity<?> create(JobOffer jobOffer, Long adminId, Long companyId, Long categoryOfferId, Long cityId, Long sectorId) {
         try {
             // Retrieve the admin using the provided ID
-            Admin admin = adminRepository.findById(adminId).orElseThrow(() -> new RuntimeException("Admin not found"));
+            Admin admin = adminRepository.findById(adminId)
+                    .orElseThrow(() -> new RuntimeException("Admin not found"));
 
             // Retrieve the company using the provided ID
-            Company company = companyRepository.findById(companyId).orElseThrow(() -> new RuntimeException("Company not found"));
+            Company company = companyRepository.findById(companyId)
+                    .orElseThrow(() -> new RuntimeException("Company not found"));
 
             // Check if the company belongs to the admin
             if (!company.getAdmin().getId().equals(admin.getId())) {
@@ -47,25 +50,36 @@ public class JobOfferServiceIMPL implements JobOfferService {
             }
 
             // Retrieve other entities using the provided IDs
-            CategoryOffer categoryOffer = categoryOfferRepository.findById(categoryOfferId).orElseThrow(() -> new RuntimeException("CategoryOffer not found"));
-            City city = cityRepository.findById(cityId).orElseThrow(() -> new RuntimeException("City not found"));
+            CategoryOffer categoryOffer = categoryOfferRepository.findById(categoryOfferId)
+                    .orElseThrow(() -> new RuntimeException("CategoryOffer not found"));
+            City city = cityRepository.findById(cityId)
+                    .orElseThrow(() -> new RuntimeException("City not found"));
+
+            // Retrieve the sector using the provided ID
+            Sector sector = sectorRepository.findById(sectorId)
+                    .orElseThrow(() -> new RuntimeException("Sector not found"));
 
             // Assign entities to the job offer
             jobOffer.setAdmin(admin);
             jobOffer.setCompany(company);
             jobOffer.setCategoryOffer(categoryOffer);
             jobOffer.setCity(city);
+            jobOffer.setSector(sector); // Assign the sector to the job offer
 
-            // Save the job offer in the database
-            jobOffer.setDateCreation(new Date()); // Automatically assign the creation date
+            // Automatically assign the creation date
+            jobOffer.setDateCreation(new Date());
+
+            // Set the closing date to 30 days from now if not provided
             if (jobOffer.getClosingDate() == null) {
                 Calendar calendar = Calendar.getInstance();
                 calendar.add(Calendar.DAY_OF_MONTH, 30);
                 jobOffer.setClosingDate(calendar.getTime());
-            } else {
-                jobOffer.setClosingDate(jobOffer.getClosingDate());
             }
+
+            // Set the initial status of the job offer
             jobOffer.setStatus(JobStatus.PENDING);
+
+            // Save the job offer in the database
             JobOffer savedJobOffer = jobOfferRepository.save(jobOffer);
 
             // Create a success response
@@ -83,8 +97,7 @@ public class JobOfferServiceIMPL implements JobOfferService {
 
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
-    }
-    @Override
+    }    @Override
     public ResponseEntity<?> getAll() {
         try {
             // Récupérer toutes les offres d'emploi, sauf celles ayant le statut "PENDING"
@@ -826,7 +839,7 @@ public class JobOfferServiceIMPL implements JobOfferService {
                         keyword, keyword, keyword);
             } else {
                 // If no keyword, fetch all job offers
-                filteredJobOffers = jobOfferRepository.findAll();
+                filteredJobOffers = jobOfferRepository.findByStatusNot(JobStatus.PENDING);
             }
 
             // Apply job type filter

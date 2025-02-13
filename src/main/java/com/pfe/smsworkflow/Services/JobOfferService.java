@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface JobOfferService {
 
-    public ResponseEntity<?> create(JobOffer jobOffer, Long adminId, Long companyId, Long categoryOfferId, Long cityId);
+    public ResponseEntity<?> create(JobOffer jobOffer, Long adminId, Long companyId, Long categoryOfferId, Long cityId, Long sectorId);
     ResponseEntity<?> getAll();
     public ResponseEntity<?> updateJobOffer(JobOffer jobOffer, Long id, Long adminId, Long companyId, Long categoryOfferId, Long cityId);
     ResponseEntity<?> getById(Long id);

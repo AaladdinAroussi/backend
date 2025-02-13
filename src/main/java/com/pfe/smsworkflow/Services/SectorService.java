@@ -10,7 +10,7 @@ import java.util.List;
 public interface SectorService {
     ResponseEntity<?> create(Sector sector, Long superadminId);
     ResponseEntity<?> getAll();
-    ResponseEntity<List<Sector>> getSectorsByCategory(Long categoryId);
+    ResponseEntity<?> getSectorsByCategory(Long categoryId);
     ResponseEntity<?> getById(Long id);
     ResponseEntity<?> updateSector(Sector sector,Long id);
     ResponseEntity<?> delete(Long id);

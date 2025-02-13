@@ -15,6 +15,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Date;
 
 
@@ -36,7 +38,17 @@ public class UserDetailsServiceImpl implements UserDetailsService {
      * qui contient les informations de l'utilisateur (comme le nom d'utilisateur, le mot de passe et les rôles) nécessaires
      * à Spring Security pour effectuer l'authentification et l'autorisation.
      *  Si l'utilisateur n'est pas trouvé, elle lance une exception UsernameNotFoundException.*/
+    // Méthode pour récupérer l'adresse IP de la machine
 
+    private String getServerIp() {
+        try {
+            InetAddress inetAddress = InetAddress.getLocalHost();
+            return inetAddress.getHostAddress(); // Retourne l'adresse IP
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            return "Unknown IP"; // Gérer l'exception si l'adresse IP ne peut pas être récupérée
+        }
+    }
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -57,7 +69,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             LoginHistory loginHistory = new LoginHistory();
             loginHistory.setSuperAdmin((SuperAdmin) user);
             loginHistory.setLoginDate(new Date());
-            loginHistory.setLoginIp(request.getRemoteAddr()); // Récupère l'adresse IP de la requête
+            // Récupérer l'adresse IP de la machine
+
+            String serverIp = getServerIp();
+
+            loginHistory.setLoginIp(serverIp);  // Enregistre l'adresse IP du serveur
             loginHistory.setUsername(username);  // Ajoute l'utilisateur qui a initié la connexion
 
             loginHistoryRepository.save(loginHistory); // Sauvegarde l'historique

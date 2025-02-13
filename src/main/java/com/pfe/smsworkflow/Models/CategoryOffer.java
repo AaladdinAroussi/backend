@@ -6,11 +6,13 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+
 @Getter
 @Setter
 @Entity
-public class CategoryOffer {
+public class CategoryOffer extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -21,15 +23,15 @@ public class CategoryOffer {
     @ManyToOne
     @JoinColumn(name = "super_admin_id")
     private SuperAdmin superAdmin;
+
     @JsonIgnore
     @OneToMany(mappedBy = "categoryOffer")
     private Set<JobOffer> jobOffers = new HashSet<>();
-    @JsonIgnore
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "category_offer_sector",
-            joinColumns = @JoinColumn(name = "category_offer_id"),
-            inverseJoinColumns = @JoinColumn(name = "sector_id")
-    )
-    private Set<Sector> sectors = new HashSet<>();
+
+    // Champ pour stocker les IDs des secteurs associés
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "category_offer_sector_ids", joinColumns = @JoinColumn(name = "category_offer_id"))
+    @Column(name = "sector_id")
+    private List<Long> sectorIds; // Liste des IDs des secteurs associés
+
 }

@@ -24,6 +24,7 @@ public interface JobOfferRepository extends JpaRepository<JobOffer, Long> {
     List<JobOffer> findByCity_NameIgnoreCase(String cityName);
 
     List<JobOffer> findByStatus(JobStatus status);
+    List<JobOffer> findByCompany_PostCodeContainingIgnoreCase(String postcode);
 
     List<JobOffer> findByJobType(JobType jobType);
 

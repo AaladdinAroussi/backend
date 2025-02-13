@@ -11,7 +11,7 @@ import java.util.Set;
 @Getter
 @Setter
 @Entity
-public class JobOffer {
+public class JobOffer extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -48,14 +48,16 @@ public class JobOffer {
     @JoinColumn(name = "super_admin_id") // Ajoutez cette ligne pour référencer SuperAdmin
     private SuperAdmin superAdmin; // Ajoutez ce champ pour stocker le SuperAdmin
 
- @JsonIgnore   //new
-@ManyToMany
-@JoinTable(
-        name = "job_offer_candidat",
-        joinColumns = @JoinColumn(name = "job_offer_id"),
-        inverseJoinColumns = @JoinColumn(name = "candidat_id")
-)
-private Set<Candidat> candidats;
+         @JsonIgnore   //new
+        @ManyToMany
+        @JoinTable(
+                name = "job_offer_candidat",
+                joinColumns = @JoinColumn(name = "job_offer_id"),
+                inverseJoinColumns = @JoinColumn(name = "candidat_id")
+        )
+        private Set<Candidat> candidats;
 
-
+    @ManyToOne
+    @JoinColumn(name = "sector_id", nullable = false)
+    private Sector sector;
 }

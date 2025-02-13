@@ -2,6 +2,7 @@ package com.pfe.smsworkflow.Controllers;
 
 import com.pfe.smsworkflow.Models.Company;
 import com.pfe.smsworkflow.Models.JobOffer;
+import com.pfe.smsworkflow.Services.AdminService;
 import com.pfe.smsworkflow.Services.CompanyService;
 import com.pfe.smsworkflow.Services.FavorisService;
 import com.pfe.smsworkflow.Services.JobOfferService;
@@ -13,12 +14,13 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 //@CrossOrigin("*")
 @RequestMapping("api/commonAdmin/")
-@PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
 public class CommonAdminController {
     @Autowired
     private JobOfferService jobOfferService;
     @Autowired
     private CompanyService companyService;
+    @Autowired
+    private AdminService adminService;
 
     // COMPANY ENDPOINTS
     @PostMapping("saveCompany/{adminId}")
@@ -49,8 +51,10 @@ public class CommonAdminController {
                                             @RequestParam Long adminId,
                                             @RequestParam Long companyId,
                                             @RequestParam Long categoryOfferId,
-                                            @RequestParam Long cityId) {
-        return jobOfferService.create(jobOffer, adminId, companyId, categoryOfferId, cityId);
+                                            @RequestParam Long cityId,
+                                            @RequestParam Long sectorId
+                                            ) {
+        return jobOfferService.create(jobOffer, adminId, companyId, categoryOfferId, cityId,sectorId);
     }
 
     // Mettre à jour une offre d'emploi
@@ -80,5 +84,8 @@ public class CommonAdminController {
         return jobOfferService.getCandidatById(candidatId);
     }
 
-
+    @DeleteMapping("deleteadmin/{id}")
+    public ResponseEntity<?> deleteAdmin(@PathVariable Long id) {
+        return adminService.delete(id);
+    }
 }

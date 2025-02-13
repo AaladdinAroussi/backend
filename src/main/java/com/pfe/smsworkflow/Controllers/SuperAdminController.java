@@ -10,11 +10,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("api/superAdmin/")
-@PreAuthorize("hasRole('SUPERADMIN')") // ✅ Seuls les SUPERADMIN peuvent accéder à ce contrôleur
+//@PreAuthorize("hasRole('SUPERADMIN')") // ✅ Seuls les SUPERADMIN peuvent accéder à ce contrôleur
 public class SuperAdminController {
     @Autowired
     private CandidatService candidatService;
@@ -125,26 +127,36 @@ public class SuperAdminController {
     // USER MANAGEMENT ENDPOINTS
 
     // Endpoint pour bloquer un utilisateur
-    @PutMapping("/{userId}/block")
-    public ResponseEntity<?> blockUser(@PathVariable Long userId) {
+    @PutMapping("block/{userId}")
+    public ResponseEntity<Map<String, String>> blockUser(@PathVariable Long userId) {
         Optional<User> user = userManagementService.blockUser(userId);
+        Map<String, String> response = new HashMap<>();
+
         if (user.isPresent()) {
-            return ResponseEntity.ok().body("User has been blocked successfully.");
+            response.put("message", "User has been blocked successfully.");
+            return ResponseEntity.ok().body(response);
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+            response.put("error", "User not found.");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
     }
 
+
     // Débloquer un utilisateur
-    @PutMapping("/{userId}/unblock")
-    public ResponseEntity<?> unblockUser(@PathVariable Long userId) {
+    @PutMapping("unblock/{userId}")
+    public ResponseEntity<Map<String, String>> unblockUser(@PathVariable Long userId) {
         Optional<User> user = userManagementService.unblockUser(userId);
+        Map<String, String> response = new HashMap<>();
+
         if (user.isPresent()) {
-            return ResponseEntity.ok().body("User has been unblocked successfully.");
+            response.put("message", "User has been unblocked successfully.");
+            return ResponseEntity.ok().body(response);
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+            response.put("error", "User not found.");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
     }
+
 
     @GetMapping("getAllCandidats")
     public ResponseEntity<?> getAllCandidats() {

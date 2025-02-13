@@ -74,7 +74,7 @@ public class CommonController {
         return sectorService.getById(id);
     }
     @GetMapping("allSectorsByCategory")
-    public ResponseEntity<List<Sector>> getSectorsByCategory(@RequestParam Long categoryId) {
+    public ResponseEntity<?> getSectorsByCategory(@RequestParam Long categoryId) {
         return sectorService.getSectorsByCategory(categoryId);
     }
     // Filter ENDPOINTS
@@ -156,4 +156,6 @@ public class CommonController {
             @RequestParam(required = false) Float salary) {
         return jobOfferService.filterJobOffers(keyword, jobTypes, category, location, experienceLevel, salary);
     }
+
+
 }

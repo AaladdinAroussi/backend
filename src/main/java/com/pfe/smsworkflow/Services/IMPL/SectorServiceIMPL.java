@@ -52,16 +52,10 @@ public class SectorServiceIMPL implements SectorService {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
             }
 
-            // Récupérer les catégories à partir des IDs fournis
-            Set<CategoryOffer> categories = new HashSet<>();
-            for (Long categoryId : sector.getCategoryIds()) { // Utiliser categoryIds du corps de la requête
+            // Vérifier si les catégories associées existent
+            for (Long categoryId : sector.getCategoryIds()) {
                 Optional<CategoryOffer> categoryOptional = categoryOfferRepository.findById(categoryId);
-                if (categoryOptional.isPresent()) {
-                    CategoryOffer categoryOffer = categoryOptional.get();
-                    categories.add(categoryOffer);
-                    // Ajouter le secteur à l'offre de catégorie
-                    categoryOffer.getSectors().add(sector); // Mettre à jour la relation inverse
-                } else {
+                if (!categoryOptional.isPresent()) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("message", "Error: Category with ID " + categoryId + " does not exist.");
                     errorResponse.put("status", HttpStatus.NOT_FOUND.value());
@@ -69,22 +63,13 @@ public class SectorServiceIMPL implements SectorService {
                 }
             }
 
-            // Assigner les catégories au secteur
-            sector.setCategoryOffers(categories);
-
             // Sauvegarder l'objet Sector
             Sector savedSector = sectorRepository.save(sector);
-
-            // Récupérer les identifiants des catégories associées
-            List<Long> savedCategoryIds = savedSector.getCategoryOffers().stream()
-                    .map(CategoryOffer::getId)
-                    .collect(Collectors.toList());
 
             // Créer une réponse de succès
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Sector added successfully!");
             response.put("sector", savedSector);
-            response.put("associatedCategoryIds", savedCategoryIds); // Ajouter les IDs des catégories associées
             response.put("status", HttpStatus.CREATED.value());
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -107,20 +92,18 @@ public class SectorServiceIMPL implements SectorService {
         return new ResponseEntity<>(sectors, HttpStatus.OK);  // Return 200 OK with sectors
     }
     @Override
-    public ResponseEntity<List<Sector>> getSectorsByCategory(Long categoryId) {
-        Optional<CategoryOffer> categoryOptional = categoryOfferRepository.findById(categoryId);
-        if (!categoryOptional.isPresent()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // Retourner 404 si la catégorie n'existe pas
-        }
-
-        List<Sector> sectors = sectorRepository.findByCategoryOffers(categoryOptional.get());
+    public ResponseEntity<?> getSectorsByCategory(Long categoryId) {
+        // Utiliser une liste contenant l'ID de la catégorie
+        List<Sector> sectors = sectorRepository.findByCategoryIdsIn(Collections.singletonList(categoryId));
         if (sectors.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT); // Retourner 204 No Content si aucun secteur n'est trouvé
+            // Créer une réponse avec un message personnalisé
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "No sectors found for the given category ID: " + categoryId);
+            response.put("status", HttpStatus.NOT_FOUND.value());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response); // Retourner 404 Not Found avec le message
         }
-
         return new ResponseEntity<>(sectors, HttpStatus.OK); // Retourner 200 OK avec les secteurs
     }
-
     // Method to get a sector by its ID
     @Override
     public ResponseEntity<Sector> getById(Long id) {
