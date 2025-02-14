@@ -11,8 +11,6 @@ public class Favoris  extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-
     @ManyToOne
     @JoinColumn(name = "job_offer_id", nullable = false)
     private JobOffer jobOffer;

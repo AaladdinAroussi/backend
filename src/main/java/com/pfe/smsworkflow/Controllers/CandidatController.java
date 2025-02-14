@@ -34,5 +34,9 @@ public class CandidatController {
     public ResponseEntity<?> deleteCandidat(@PathVariable Long id) {
         return candidatService.delete(id);
     }
+    @GetMapping("getCandidatById/{id}")
+    public ResponseEntity<?> getCandidatById(@PathVariable Long id) {
+        return candidatService.getById(id);
+    }
 
 }

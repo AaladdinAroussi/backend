@@ -53,7 +53,8 @@ public class DataInitializer {
     private void initSuperAdmin() {
         if (superadminRepository.findByEmail("admin@gmail.com").isEmpty()) {
             SuperAdmin superAdmin = new SuperAdmin();
-            superAdmin.setUsername("admin");
+            superAdmin.setPhone("22722397");
+            superAdmin.setFullName("admin");
             superAdmin.setEmail("admin@gmail.com");
             superAdmin.setPassword(passwordEncoder.encode("123456"));
 
@@ -62,7 +63,7 @@ public class DataInitializer {
 
             superAdmin.setRoles(Set.of(superAdminRole));
             superadminRepository.save(superAdmin);
-            System.out.println("Compte administrateur créé : admin@gmail.com / 123456");
+            System.out.println("Compte administrateur créé : admin@gmail.com|22722397 / 123456");
         } else {
             System.out.println("Le compte administrateur existe déjà.");
         }

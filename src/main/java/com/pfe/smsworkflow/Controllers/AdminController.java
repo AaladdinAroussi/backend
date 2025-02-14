@@ -72,7 +72,7 @@ private RoleRepository roleRepository ;
         return adminService.getAll();
     }
 
-    @GetMapping("byid/{id}")
+    @GetMapping("getAdminById/{id}")
     public ResponseEntity<?> getAdminById(@PathVariable Long id) {
         return adminService.getById(id);
     }

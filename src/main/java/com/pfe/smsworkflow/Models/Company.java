@@ -14,8 +14,6 @@ public class Company extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-
     private String address;
     private String name;
     private String description;
@@ -28,7 +26,7 @@ public class Company extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "admin_id")
     private Admin admin;
-@JsonIgnore
+    @JsonIgnore
     @ManyToMany
     @JoinTable(
             name = "company_city",

@@ -102,9 +102,8 @@ public class CandidatServiceIMPL implements CandidatService {
             Candidat existingCandidat = candidatRepository.findById(id)
                     .orElseThrow(() -> new EntityNotFoundException("Candidat with ID " + id + " not found!"));
 
-            // Mise à jour des champs du Candidat
-            existingCandidat.setFirstName(candidat.getFirstName() == null ? existingCandidat.getFirstName() : candidat.getFirstName());
-            existingCandidat.setLastName(candidat.getLastName() == null ? existingCandidat.getLastName() : candidat.getLastName());
+            // Update basic fields
+            existingCandidat.setFullName(candidat.getFullName() == null ? existingCandidat.getFullName() : candidat.getFullName());
             existingCandidat.setPhone(candidat.getPhone() == null ? existingCandidat.getPhone() : candidat.getPhone());
             existingCandidat.setPassword(candidat.getPassword() == null ? existingCandidat.getPassword() : candidat.getPassword());
             existingCandidat.setEmail(candidat.getEmail() == null ? existingCandidat.getEmail() : candidat.getEmail());
@@ -114,9 +113,15 @@ public class CandidatServiceIMPL implements CandidatService {
             existingCandidat.setLevel(candidat.getLevel() == null ? existingCandidat.getLevel() : candidat.getLevel());
             existingCandidat.setSector(candidat.getSector() == null ? existingCandidat.getSector() : candidat.getSector());
 
+            // Update candidateDetails if provided
+            /*   if (candidat.getCandidateDetails() != null) {
+                // Convert the incoming CandidateDetails to JSON and set it
+                existingCandidat.setCandidateDetailsFromObject(candidat.getCandidateDetailsAsObject());
+            }*/
+
             Candidat updatedCandidat = candidatRepository.save(existingCandidat);
 
-            // Créer une réponse de succès
+            // Create a success response
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Candidat updated successfully!");
             response.put("candidat", updatedCandidat);
@@ -131,7 +136,6 @@ public class CandidatServiceIMPL implements CandidatService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
-
     // Supprimer un Candidat
     @Override
     public ResponseEntity<?> delete(Long id) {

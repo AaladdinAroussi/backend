@@ -10,7 +10,7 @@ import java.util.List;
 @Repository
 public interface SectorRepository extends JpaRepository<Sector,Long> {
     boolean existsByName(String name);
+    List<Sector> findByCategoryIdsIn(List<Long> categoryIds);
     //List<Sector> findByCategoryOffers(CategoryOffer categoryOffer);
 
-    List<Sector> findByCategoryIdsIn(List<Long> categoryIds);
 }

@@ -26,7 +26,7 @@ public class UserDetailsImpl implements UserDetails {
     private static final long serialVersionUID = 1L;
 
     private Long id;
-    private String username;
+    private String phone;
     private String email;
 
     @JsonIgnore
@@ -34,10 +34,10 @@ public class UserDetailsImpl implements UserDetails {
 
     private Collection<? extends GrantedAuthority> authorities;
 
-    public UserDetailsImpl(Long id, String username, String email, String password,
+    public UserDetailsImpl(Long id, String phone, String email, String password,
                            Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
-        this.username = username;
+        this.phone = phone;
         this.email = email;
         this.password = password;
         this.authorities = authorities;
@@ -55,7 +55,7 @@ public class UserDetailsImpl implements UserDetails {
         // Retourne une nouvelle instance de UserDetailsImpl avec les informations de l'utilisateur
         return new UserDetailsImpl(
                 user.getId(),
-                user.getUsername(),
+                user.getPhone(),
                 user.getEmail(),
                 user.getPassword(),
                 authorities
@@ -74,6 +74,10 @@ public class UserDetailsImpl implements UserDetails {
     public String getEmail() {
         return email; // Récupère l'email de l'utilisateur
     }
+    public String getPhone() {
+        return phone; // Récupère phone de l'utilisateur
+    }
+
 
     @Override
     public String getPassword() {
@@ -81,9 +85,7 @@ public class UserDetailsImpl implements UserDetails {
     }
 
     @Override
-    public String getUsername() {
-        return username; // Récupère le nom d'utilisateur
-    }
+    public String getUsername() {return phone; }// Récupère le numéro de téléphone comme nom d'utilisateur
 
     /*
      * Ces méthodes retournent toujours 'true', car dans ce cas, on suppose que l'utilisateur

@@ -1,9 +1,11 @@
 package com.pfe.smsworkflow.Controllers;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import com.pfe.smsworkflow.Models.*;
+import com.pfe.smsworkflow.Repository.VerificationCodeRepository;
 import com.pfe.smsworkflow.Security.Services.RefreshTokenService;
 import com.pfe.smsworkflow.Security.Services.UserDetailsImpl;
 import com.pfe.smsworkflow.Security.jwt.JwtUtils;
@@ -43,6 +45,8 @@ public class AuthController {
 //    private JavaMailSender emailSender ;
     @Autowired
     UsersRepository userRepository;
+    @Autowired
+    VerificationCodeRepository verificationCodeRepository;
 
     @Autowired
     RoleRepository roleRepository;
@@ -57,28 +61,27 @@ public class AuthController {
     RefreshTokenService refreshTokenService;
 
 
+    private String generateVerificationCode() {
+        int code = ThreadLocalRandom.current().nextInt(100000, 1000000); // Generates a random number between 100000 and 999999
+        return String.valueOf(code); // Convert the integer to a String
+    }
 
     @PostMapping("/signupCandidat")
     public ResponseEntity<?> registerCandidat(@Valid @RequestBody SignupRequest signUpRequest) {
-        if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Username is already taken!"));
+        // Vérifier si le numéro de téléphone existe déjà
+        if (userRepository.existsByPhone(signUpRequest.getPhone())) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Phone number is already in use!"));
         }
-
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: Email is already in use!"));
         }
 
-        // Vérifier si le numéro de téléphone existe déjà
-        if (userRepository  .existsByPhone(signUpRequest.getPhone())) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Phone number is already in use!"));
-        }
-
         // Créer un candidat
         Candidat candidat = new Candidat();
+        candidat.setFullName(signUpRequest.getFullName()); // Ajoutez cette ligne
         candidat.setEmail(signUpRequest.getEmail());
         candidat.setPassword(encoder.encode(signUpRequest.getPassword()));
-        candidat.setUsername(signUpRequest.getUsername());
-        candidat.setPhone(signUpRequest.getPhone()); // Ajoutez cette ligne pour enregistrer le numéro de téléphone
+        candidat.setPhone(signUpRequest.getPhone());
 
         // Vérifier si le rôle ROLE_CANDIDAT existe
         Role roleCandidat = roleRepository.findByName(ERole.ROLE_CANDIDAT)
@@ -91,30 +94,34 @@ public class AuthController {
 
         // Sauvegarder le candidat (enregistre d'abord dans `users`, puis `candidat`)
         userRepository.save(candidat);
-
+        // Créer un code de vérification
+        VerificationCode verificationCode = new VerificationCode();
+        verificationCode.setCandidat(candidat); // Associer le code de vérification à l'utilisateur
+        verificationCode.setCode(generateVerificationCode()); // Méthode pour générer un code
+        verificationCode.setCodeStatus(0); // 0 = non envoyé
+        // Sauvegarder le code de vérification
+        verificationCodeRepository.save(verificationCode);
         return ResponseEntity.ok(new MessageResponse("Candidat registered successfully with ROLE_CANDIDAT!"));
     }
     @PostMapping("/signupAdmin")
     public ResponseEntity<?> registerAdmin(@Valid @RequestBody SignupRequest signUpRequest) {
-        if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Username is already taken!"));
+        // Vérifier si le numéro de téléphone existe déjà
+        if (userRepository.existsByPhone(signUpRequest.getPhone())) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Phone number is already in use!"));
         }
 
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: Email is already in use!"));
         }
 
-        // Vérifier si le numéro de téléphone existe déjà
-        if (userRepository.existsByPhone(signUpRequest.getPhone())) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Phone number is already in use!"));
-        }
+
 
         // Créer un Admin
         Admin admin = new Admin();
+        admin.setFullName(signUpRequest.getFullName());
         admin.setEmail(signUpRequest.getEmail());
         admin.setPassword(encoder.encode(signUpRequest.getPassword()));
-        admin.setUsername(signUpRequest.getUsername());
-        admin.setPhone(signUpRequest.getPhone()); // Ajoutez cette ligne pour enregistrer le numéro de téléphone
+        admin.setPhone(signUpRequest.getPhone());
 
         // Vérifier si le rôle ROLE_ADMIN existe
         Role roleAdmin = roleRepository.findByName(ERole.ROLE_ADMIN)
@@ -127,28 +134,40 @@ public class AuthController {
 
         // Sauvegarder l'admin (enregistre d'abord dans `users`, puis `Admin`)
         userRepository.save(admin);
+        // Créer un code de vérification
+
+        VerificationCode verificationCode = new VerificationCode();
+        verificationCode.setAdmin(admin); // Associer le code de vérification à l'utilisateur
+        verificationCode.setCode(generateVerificationCode()); // Méthode pour générer un code
+        verificationCode.setCodeStatus(0); // 0 = non envoyé
+        // Sauvegarder le code de vérification
+        verificationCodeRepository.save(verificationCode);
 
         return ResponseEntity.ok(new MessageResponse("Admin registered successfully with ROLE_ADMIN!"));
     }
     @PostMapping("/signin")
-    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-        String loginInput = loginRequest.getUsername();
+    public ResponseEntity<?> authenticateUser (@Valid @RequestBody LoginRequest loginRequest) {
         Optional<User> user;
 
-        // Vérifier si l'entrée est un numéro de téléphone
-        if (loginInput.matches("\\d+")) { // Vérifie si c'est uniquement des chiffres
-            user = userRepository.findByPhone(Long.parseLong(loginInput));
+        // Vérifier si l'utilisateur se connecte avec un téléphone ou un email
+        if (loginRequest.getLogin() != null && !loginRequest.getLogin().isEmpty()) {
+            // Check if the login is a phone number or an email
+            if (loginRequest.getLogin().matches("\\d+")) { // If it's all digits, treat it as a phone number
+                user = userRepository.findByPhone(loginRequest.getLogin());
+            } else {
+                user = Optional.ofNullable(userRepository.findByEmail(loginRequest.getLogin()));
+            }
         } else {
-            user = userRepository.findByUsername(loginInput);
+            return ResponseEntity.badRequest().body("Veuillez fournir un email ou un numéro de téléphone.");
         }
 
         if (user.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Utilisateur non trouvé");
         }
 
-        // Authentifier avec le username trouvé
+        // Authentifier avec l'utilisateur trouvé
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(user.get().getUsername(), loginRequest.getPassword()));
+                new UsernamePasswordAuthenticationToken(user.get().getPhone(), loginRequest.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
@@ -160,9 +179,8 @@ public class AuthController {
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(new JwtResponse(jwt, refreshToken.getToken(), userDetails.getId(),
-                userDetails.getUsername(), userDetails.getEmail(), roles));
+                userDetails.getPhone(), userDetails.getEmail(), roles));
     }
-
     @PostMapping("/signout")
     public ResponseEntity<?> logoutUser (@Valid @RequestBody TokenRefreshRequest tokenRefreshRequest) {
         String refreshToken = tokenRefreshRequest.getRefreshToken();
@@ -195,7 +213,7 @@ public class AuthController {
                 .map(refreshTokenService::verifyExpiration)
                 .map(RefreshToken::getUser)
                 .map(user -> {
-                    String token = jwtUtils.generateTokenFromUsername(user.getUsername());
+                    String token = jwtUtils.generateTokenFromUsername(user.getPhone());
                     return ResponseEntity.ok(new TokenRefreshResponse(token, requestRefreshToken));
                 })
                 .orElseThrow(() -> new TokenRefreshException(requestRefreshToken,
@@ -264,8 +282,8 @@ public class AuthController {
 
     @PostMapping("/changePassword")
     public ResponseEntity<?> changePassword(String token, String oldPassword, String newPassword) {
-        String username = jwtUtils.getUserNameFromJwtToken(token);
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found!"));
+        String email = jwtUtils.getEmailFromJwtToken(token);
+        User user = userRepository.findByEmail(email);
         if (!encoder.matches(oldPassword,user.getPassword())) {
             throw new RuntimeException("Wrong password");
         } else if(newPassword.equals(oldPassword)){

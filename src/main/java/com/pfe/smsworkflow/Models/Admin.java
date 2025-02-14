@@ -18,4 +18,6 @@ public class Admin extends User {
     @JsonIgnore
     @OneToMany(mappedBy = "admin", cascade = CascadeType.ALL)
     private Set<Company> companies = new HashSet<>();
+    @OneToMany(mappedBy = "admin", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<VerificationCode> verificationCodes = new HashSet<>();
 }

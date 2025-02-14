@@ -11,15 +11,15 @@ public class JwtResponse {
 	private String type = "Bearer";
 	private String refreshToken;
 	private Long id;
-	private String username;
+	private String phone;
 	private String email;
 	private List<String> roles;
 
-	public JwtResponse(String accessToken, String refreshToken, Long id, String username, String email, List<String> roles) {
+	public JwtResponse(String accessToken, String refreshToken, Long id, String phone, String email, List<String> roles) {
 		this.token = accessToken;
 		this.refreshToken = refreshToken;
 		this.id = id;
-		this.username = username;
+		this.phone = phone;
 		this.email = email;
 		this.roles = roles;
 	}

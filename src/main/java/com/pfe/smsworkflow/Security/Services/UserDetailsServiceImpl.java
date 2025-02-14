@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Date;
+import java.util.Optional;
 
 
 @Service
@@ -51,36 +52,42 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     }
     @Override
     @Transactional
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
+    public UserDetails loadUserByUsername(String login) throws UsernameNotFoundException {
+        Optional<User> userOptional;
+
+        // Vérifier si l'utilisateur se connecte avec un téléphone ou un email
+        if (login.matches("\\d+")) { // Si c'est un numéro
+            userOptional = userRepository.findByPhone(login);
+        } else {
+            userOptional = Optional.ofNullable(userRepository.findByEmail(login));
+        }
+
+        User user = userOptional.orElseThrow(() ->
+                new UsernameNotFoundException("Utilisateur non trouvé avec : " + login)
+        );
 
         // Vérifier si l'utilisateur est bloqué
         if (user.getStatus() == UserStatus.BLOCKED) {
             throw new UsernameNotFoundException("Ce compte est bloqué. Contactez l'administrateur.");
         }
 
-        // Vérifie si l'utilisateur est un superadmin
+        // Vérifier si l'utilisateur est un SuperAdmin
         boolean isSuperAdmin = user.getRoles().stream()
                 .anyMatch(role -> role.getName().name().equals("ROLE_SUPERADMIN"));
 
-        if (isSuperAdmin) {
-            // Enregistre l'historique de connexion
+        if (isSuperAdmin && user instanceof SuperAdmin) {
+            // Enregistrer l'historique de connexion
             LoginHistory loginHistory = new LoginHistory();
             loginHistory.setSuperAdmin((SuperAdmin) user);
             loginHistory.setLoginDate(new Date());
-            // Récupérer l'adresse IP de la machine
-
             String serverIp = getServerIp();
-
             loginHistory.setLoginIp(serverIp);  // Enregistre l'adresse IP du serveur
-            loginHistory.setUsername(username);  // Ajoute l'utilisateur qui a initié la connexion
+            loginHistory.setUsername(login);
 
             loginHistoryRepository.save(loginHistory); // Sauvegarde l'historique
         }
 
         return UserDetailsImpl.build(user);
     }
-
 
 }

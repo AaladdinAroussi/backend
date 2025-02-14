@@ -9,5 +9,5 @@ import java.util.Optional;
 @Repository
 public interface SuperadminRepository extends JpaRepository<SuperAdmin, Long> {
     Optional<SuperAdmin> findByEmail(String email);
-    Optional<User> findByUsername(String username);
+    //Optional<User> findByUsername(String username);
 }

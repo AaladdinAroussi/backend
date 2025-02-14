@@ -1,6 +1,7 @@
 package com.pfe.smsworkflow.Controllers;
 
 import com.pfe.smsworkflow.Models.*;
+import com.pfe.smsworkflow.Repository.SuperadminRepository;
 import com.pfe.smsworkflow.Services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,8 @@ import java.util.Optional;
 public class SuperAdminController {
     @Autowired
     private CandidatService candidatService;
+    @Autowired
+    private SuperadminRepository superadminRepository;
     @Autowired
     private AdminService adminService;
     @Autowired
@@ -174,5 +177,29 @@ public class SuperAdminController {
         return adminService.getAll();
     }
 
+    @GetMapping("getSuperAdminById/{id}")
+    public ResponseEntity<?> getById(@PathVariable Long id ) {
+        try {
+            Optional<SuperAdmin> SuperAdminOptional = superadminRepository.findById(id);
+            if (SuperAdminOptional.isPresent()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("message", "SuperAdminOptional found!");
+                response.put("SuperAdminOptional", SuperAdminOptional.get());
+                response.put("status", HttpStatus.OK.value());
+                return ResponseEntity.ok(response);
+            } else {
+                Map<String, Object> response = new HashMap<>();
+                response.put("message", "SuperAdminOptional not found with id: " + id);
+                response.put("status", HttpStatus.NOT_FOUND.value());
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Error: " + e.getMessage());
+            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+    }
 
 }

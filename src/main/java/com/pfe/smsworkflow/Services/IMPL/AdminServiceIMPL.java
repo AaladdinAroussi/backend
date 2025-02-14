@@ -104,12 +104,9 @@ public class AdminServiceIMPL implements AdminService {
                     .orElseThrow(() -> new EntityNotFoundException("Admin with ID " + id + " not found!"));
 
             // Mise à jour des champs de l'Admin
-            existingAdmin.setFirstName(admin.getFirstName() == null ? existingAdmin.getFirstName() : admin.getFirstName());
-            existingAdmin.setLastName(admin.getLastName() == null ? existingAdmin.getLastName() : admin.getLastName());
+            existingAdmin.setFullName(admin.getFullName() == null ? existingAdmin.getFullName() : admin.getFullName());
             existingAdmin.setPhone(admin.getPhone() == null ? existingAdmin.getPhone() : admin.getPhone());
-            existingAdmin.setPassword(admin.getPassword() == null ? existingAdmin.getPassword() : admin.getPassword());
             existingAdmin.setEmail(admin.getEmail() == null ? existingAdmin.getEmail() : admin.getEmail());
-            existingAdmin.setRoles(admin.getRoles() == null ? existingAdmin.getRoles() : admin.getRoles());
             existingAdmin.setCities(admin.getCities() == null ? existingAdmin.getCities() : admin.getCities());
 
             Admin updatedAdmin = adminRepository.save(existingAdmin);

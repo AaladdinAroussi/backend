@@ -19,20 +19,19 @@ public class User  extends BaseEntity{
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    private String firstName;
-    private String lastName;
-    private String username;
+    private String fullName;
     private String passwordResetToken;
     @Column(unique = true)
-    private Long phone;
+    private String phone;
     private String password;
     private String email;
-    private boolean enabled = true;
     @Enumerated(EnumType.ORDINAL) // Stocke l'index (0, 1, 2) en base de données
     private UserStatus status = UserStatus.fromValue(1);
 
-   private boolean isConfirmMobile=false ;
-   private boolean isConfirmEmail =false ;
+    @Column(columnDefinition = "SMALLINT")
+    private Integer isConfirmMobile = 0;
+    @Column(columnDefinition = "SMALLINT")
+    private Integer isConfirmEmail = 0;
 
 
     @JsonIgnore
@@ -49,10 +48,13 @@ public class User  extends BaseEntity{
             inverseJoinColumns = @JoinColumn(name = "city_id"))
     private Set<City> cities = new HashSet<>();
 
+   // @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    //private Set<VerificationCode> verificationCodes = new HashSet<>();
+
     public User() {}
 
-    public User(String email, String password) {
+    /*public User(String email, String password) {
         this.email = email;
         this.password = password;
-    }
+    }*/
 }
