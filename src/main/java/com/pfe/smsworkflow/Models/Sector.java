@@ -40,4 +40,8 @@ public class Sector extends BaseEntity {
     @OneToMany(mappedBy = "sector")
     private List<JobOffer> jobOffers = new ArrayList<>();
 
+    public void setName(String name) {
+        this.name = name != null ? name.toLowerCase() : null;
+    }
+
 }

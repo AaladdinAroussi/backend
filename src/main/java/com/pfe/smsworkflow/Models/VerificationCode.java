@@ -7,7 +7,10 @@ import lombok.Setter;
 @Setter
 @Getter
 @Entity
-@Table(name = "verification_codes")
+@Table(name = "codes", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"candidat_id"}),
+        @UniqueConstraint(columnNames = {"admin_id"})
+})
 
 public class VerificationCode extends BaseEntity{
     @Id
@@ -21,13 +24,12 @@ public class VerificationCode extends BaseEntity{
     private Admin admin; // The user associated with this verification code
     @Column(name = "code", nullable = false)
     private String code;
+    @Enumerated(EnumType.ORDINAL) // Store the ordinal value in the database
     @Column(name = "code_status", nullable = false)
-    private int codeStatus; // 0 = not sent, 1 = sent
+    private CodeStatus codeStatus; // 0 = not sent, 1 = sent,resent =  2
     public VerificationCode() {
     }
-    /*public VerificationCode(User user, String code, int codeStatus) {
-        this.user = user;
-        this.code = code;
-        this.codeStatus = codeStatus;
-    }*/
+    public boolean isCodeValid(String inputCode) {
+        return this.code.equals(inputCode);
+    }
 }

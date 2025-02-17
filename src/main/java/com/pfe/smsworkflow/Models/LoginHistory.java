@@ -19,7 +19,7 @@ public class LoginHistory {
     private SuperAdmin superAdmin;
 
     private Date loginDate;
-    //private Date logoutDate;
+    private Date logoutDate;
 
     private String loginIp;
 

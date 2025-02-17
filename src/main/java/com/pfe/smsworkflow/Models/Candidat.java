@@ -1,5 +1,6 @@
 package com.pfe.smsworkflow.Models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
@@ -28,10 +29,11 @@ public class Candidat extends User{
 
     @OneToMany(mappedBy = "candidat", fetch = FetchType.EAGER)
     private Set<Favoris> favoris = new HashSet<>();
-    @OneToMany(mappedBy = "candidat", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    @OneToMany(mappedBy = "candidat", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Set<VerificationCode> verificationCodes = new HashSet<>();
-
-    @Column(columnDefinition = "text")
+//encode
+  /*  @Column(columnDefinition = "text")
     private String candidateDetails; // Store JSON as a string
     // Optionally, you can create a method to convert to/from CandidateDetails
     public CandidateDetails getCandidateDetailsAsObject() {
@@ -58,7 +60,7 @@ public class Candidat extends User{
                 .collect(Collectors.toList()));
 
         return details;
-    }*/
+    }
 
     public void setCandidateDetailsFromObject(CandidateDetails details) {
         try {
@@ -66,6 +68,7 @@ public class Candidat extends User{
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-    }
+    }*/
+
 
 }

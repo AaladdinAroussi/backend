@@ -31,4 +31,8 @@ public class City  extends BaseEntity{
     @ManyToOne
     @JoinColumn(name = "super_admin_id")
     private SuperAdmin superAdmin;
+
+    public void setName(String name) {
+        this.name = name != null ? name.toLowerCase() : null;
+    }
 }

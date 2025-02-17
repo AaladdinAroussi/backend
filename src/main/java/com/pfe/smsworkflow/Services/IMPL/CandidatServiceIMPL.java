@@ -1,8 +1,12 @@
 package com.pfe.smsworkflow.Services.IMPL;
 
 import com.pfe.smsworkflow.Models.Candidat;
+import com.pfe.smsworkflow.Models.User;
+import com.pfe.smsworkflow.Models.VerificationCode;
 import com.pfe.smsworkflow.Repository.CandidatRepository;
+import com.pfe.smsworkflow.Repository.UsersRepository;
 import com.pfe.smsworkflow.Services.CandidatService;
+import com.pfe.smsworkflow.payload.response.MessageResponse;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,6 +22,8 @@ import java.util.Optional;
 public class CandidatServiceIMPL implements CandidatService {
     @Autowired
     private CandidatRepository candidatRepository;
+    @Autowired
+    private UsersRepository userRepository;
 
     // Créer un Candidat
     @Override
@@ -159,4 +165,30 @@ public class CandidatServiceIMPL implements CandidatService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
+    public ResponseEntity<?> verifyMobileCode(Candidat candidat, String inputCode) {
+
+        for (VerificationCode verificationCode : candidat.getVerificationCodes()) {
+
+            if (verificationCode.isCodeValid(inputCode)) {
+
+                candidat.setIsConfirmMobile(1); // Update isConfirmMobile to 1
+
+                candidatRepository.save(candidat); // Save the updated Candidat
+
+                Map<String, Object> response = new HashMap<>();
+
+                response.put("message", "Mobile number confirmed successfully!");
+
+                response.put("status", HttpStatus.OK.value());
+
+                return ResponseEntity.ok(response); // Code is valid
+
+            }
+
+        }
+
+        return ResponseEntity.badRequest().body(new MessageResponse("Error: Invalid verification code!")); // Code is invalid
+
+    }
+
 }

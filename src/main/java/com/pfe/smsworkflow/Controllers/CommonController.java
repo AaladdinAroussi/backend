@@ -17,6 +17,8 @@ public class CommonController {
     @Autowired
     private JobOfferService jobOfferService;
     @Autowired
+    private UserService userService;
+    @Autowired
     private SectorService sectorService;
     @Autowired
     private CityService cityService;
@@ -26,7 +28,8 @@ public class CommonController {
     private CompanyService companyService;
     @Autowired
     private CategoryOfferService categoryOfferService;
-
+    @Autowired
+    private CandidatService candidatService;
     // CATEGORYOFFER ENDPOINTS
     @GetMapping("allCategoryOffers")
     public ResponseEntity<?> getAllCategoryOffers() {
@@ -157,5 +160,13 @@ public class CommonController {
         return jobOfferService.filterJobOffers(keyword, jobTypes, category, location, experienceLevel, salary);
     }
 
+    @GetMapping("/getUserByEmail")
+    public ResponseEntity<?> getUserByEmail(@RequestParam String email) {
+        return userService.getUserByEmail(email);
+    }
+    @GetMapping("/getUserByPhone")
+    public ResponseEntity<?> getUserByPhone(@RequestParam String phone) {
+        return userService.getUserByPhone(phone);
+    }
 
 }

@@ -23,5 +23,7 @@ public class Level extends BaseEntity{
     @OneToMany(mappedBy = "level")
     private List<Candidat> candidats;
 
-
+    public void setName(String name) {
+        this.name = name != null ? name.toLowerCase() : null;
+    }
 }

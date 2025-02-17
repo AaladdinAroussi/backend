@@ -55,8 +55,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(String login) throws UsernameNotFoundException {
         Optional<User> userOptional;
 
-        // Vérifier si l'utilisateur se connecte avec un téléphone ou un email
-        if (login.matches("\\d+")) { // Si c'est un numéro
+        // Check if the user is logging in with a phone number or email
+        if (login.matches("\\d+")) { // If it's a number
             userOptional = userRepository.findByPhone(login);
         } else {
             userOptional = Optional.ofNullable(userRepository.findByEmail(login));
@@ -66,28 +66,27 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 new UsernameNotFoundException("Utilisateur non trouvé avec : " + login)
         );
 
-        // Vérifier si l'utilisateur est bloqué
+        // Check if the user is blocked
         if (user.getStatus() == UserStatus.BLOCKED) {
-            throw new UsernameNotFoundException("Ce compte est bloqué. Contactez l'administrateur.");
+            throw new UsernameNotFoundException("Ce compte est bloqué. Contactez l'administrateur."); // Custom message for blocked users
         }
 
-        // Vérifier si l'utilisateur est un SuperAdmin
+        // Check if the user is a SuperAdmin
         boolean isSuperAdmin = user.getRoles().stream()
                 .anyMatch(role -> role.getName().name().equals("ROLE_SUPERADMIN"));
 
         if (isSuperAdmin && user instanceof SuperAdmin) {
-            // Enregistrer l'historique de connexion
+            // Log the login history
             LoginHistory loginHistory = new LoginHistory();
             loginHistory.setSuperAdmin((SuperAdmin) user);
             loginHistory.setLoginDate(new Date());
             String serverIp = getServerIp();
-            loginHistory.setLoginIp(serverIp);  // Enregistre l'adresse IP du serveur
+            loginHistory.setLoginIp(serverIp);  // Save the server's IP address
             loginHistory.setUsername(login);
 
-            loginHistoryRepository.save(loginHistory); // Sauvegarde l'historique
+            loginHistoryRepository.save(loginHistory); // Save the login history
         }
 
         return UserDetailsImpl.build(user);
     }
-
 }

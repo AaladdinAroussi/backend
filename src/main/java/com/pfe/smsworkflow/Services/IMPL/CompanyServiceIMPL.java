@@ -13,10 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class CompanyServiceIMPL implements CompanyService {
@@ -83,17 +80,23 @@ public class CompanyServiceIMPL implements CompanyService {
         }
     }
     @Override
-    public ResponseEntity<?> getAllCompanyByAdminId(Long adminId) {
+    public ResponseEntity<?> getAllCompanyByUserId(Long userId, String role) {
         try {
-            List<Company> companies = companyRepository.findByAdminId(adminId);
+            List<Company> companies = new ArrayList<>();
+
+            if ("SUPER_ADMIN".equals(role)) {
+                companies = companyRepository.findAll(); // Récupérer toutes les entreprises
+            } else {
+                companies = companyRepository.findByAdminId(userId); // Récupérer seulement celles de l'Admin
+            }
+
             if (companies.isEmpty()) {
                 Map<String, Object> response = new HashMap<>();
-                response.put("message", "No companies found for admin ID: " + adminId);
+                response.put("message", "No companies found for user ID: " + userId);
                 response.put("status", HttpStatus.NOT_FOUND.value());
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
 
-            // Réponse avec la liste des companies
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Companies fetched successfully!");
             response.put("companies", companies);

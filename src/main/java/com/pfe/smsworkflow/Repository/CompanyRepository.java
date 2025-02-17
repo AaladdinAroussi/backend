@@ -10,5 +10,5 @@ import java.util.Optional;
 @Repository
 public interface CompanyRepository extends JpaRepository<Company,Long> {
     List<Company> findByAdminId(Long adminId);
-
+    List<Company> findBySuperAdminId(Long superAdminId);
 }

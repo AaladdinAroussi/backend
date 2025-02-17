@@ -34,4 +34,7 @@ public class CategoryOffer extends BaseEntity {
     @Column(name = "sector_id")
     private List<Long> sectorIds; // Liste des IDs des secteurs associés
 
+    public void setName(String name) {
+        this.name = name != null ? name.toLowerCase() : null;
+    }
 }

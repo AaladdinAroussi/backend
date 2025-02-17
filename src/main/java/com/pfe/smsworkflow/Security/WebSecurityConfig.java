@@ -2,6 +2,7 @@ package com.pfe.smsworkflow.Security;
 
 import com.pfe.smsworkflow.Repository.AdminRepository;
 import com.pfe.smsworkflow.Repository.RoleRepository;
+import com.pfe.smsworkflow.Security.Services.CustomAuthenticationFailureHandler;
 import com.pfe.smsworkflow.Security.Services.UserDetailsServiceImpl;
 import com.pfe.smsworkflow.Security.jwt.AuthEntryPointJwt;
 import com.pfe.smsworkflow.Security.jwt.AuthTokenFilter;
@@ -25,7 +26,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 
 @Configuration
-@EnableMethodSecurity(prePostEnabled = true) // ✅ Remplace @EnableGlobalMethodSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class WebSecurityConfig {
 
     @Autowired
@@ -38,7 +39,8 @@ public class WebSecurityConfig {
     @Autowired
     private AuthEntryPointJwt unauthorizedHandler;
 
-
+    @Autowired
+    private CustomAuthenticationFailureHandler customAuthenticationFailureHandler; // Inject your custom failure handler
 
     @Bean
     public AuthTokenFilter authenticationJwtTokenFilter() {
@@ -76,13 +78,20 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/admin/**").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers("/api/commonAdmin/**").hasAnyRole("SUPERADMIN", "ADMIN")
                         .anyRequest().authenticated()
-                );
+                )
+                .formLogin()
+                .failureHandler(customAuthenticationFailureHandler) // Use the custom failure handler
+                .permitAll()
+                .and()
+                .logout()
+                .permitAll();
 
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -95,4 +104,5 @@ public class WebSecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
 
         return source;
-    }}
+    }
+}

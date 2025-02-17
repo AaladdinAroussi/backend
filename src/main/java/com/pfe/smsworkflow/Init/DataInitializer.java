@@ -56,6 +56,7 @@ public class DataInitializer {
             superAdmin.setPhone("22722397");
             superAdmin.setFullName("admin");
             superAdmin.setEmail("admin@gmail.com");
+            superAdmin.setIsConfirmMobile(1);
             superAdmin.setPassword(passwordEncoder.encode("123456"));
 
             Role superAdminRole = roleRepository.findByName(ERole.ROLE_SUPERADMIN)

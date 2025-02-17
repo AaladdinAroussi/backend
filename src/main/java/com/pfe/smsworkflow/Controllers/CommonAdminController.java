@@ -2,14 +2,21 @@ package com.pfe.smsworkflow.Controllers;
 
 import com.pfe.smsworkflow.Models.Company;
 import com.pfe.smsworkflow.Models.JobOffer;
+import com.pfe.smsworkflow.Models.SuperAdmin;
+import com.pfe.smsworkflow.Models.User;
+import com.pfe.smsworkflow.Repository.UsersRepository;
 import com.pfe.smsworkflow.Services.AdminService;
 import com.pfe.smsworkflow.Services.CompanyService;
 import com.pfe.smsworkflow.Services.FavorisService;
 import com.pfe.smsworkflow.Services.JobOfferService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 //@CrossOrigin("*")
@@ -21,6 +28,8 @@ public class CommonAdminController {
     private CompanyService companyService;
     @Autowired
     private AdminService adminService;
+    @Autowired
+    private UsersRepository userRepository;
 
     // COMPANY ENDPOINTS
     @PostMapping("saveCompany/{adminId}")
@@ -28,10 +37,20 @@ public class CommonAdminController {
         return companyService.create(company, adminId);
     }
 // Récupérer toutes les entreprises par adminId
-    @GetMapping("getAllCompaniesByAdminId/{adminId}")
-    public ResponseEntity<?> getAllCompaniesByAdminId(@PathVariable Long adminId) {
-        return companyService.getAllCompanyByAdminId(adminId);
+@GetMapping("getAllCompanyByUserId/{userId}")
+public ResponseEntity<?> getAllCompanyByUserId(@PathVariable Long userId) {
+    Optional<User> user = userRepository.findById(userId);
+
+    if (user.isEmpty()) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("message", "User not found", "status", HttpStatus.NOT_FOUND.value()));
     }
+
+    String role = user.get() instanceof SuperAdmin ? "SUPER_ADMIN" : "ADMIN";
+    return companyService.getAllCompanyByUserId(userId, role);
+}
+
+
     @PutMapping("updateCompany")
     public ResponseEntity<?> updateCompany(@RequestBody Company company, @RequestParam Long id) {
         return companyService.updateCompany(company, id);
@@ -48,14 +67,14 @@ public class CommonAdminController {
     //add adminId ou superAdminId
     @PostMapping("/create")
     public ResponseEntity<?> createJobOffer(@RequestBody JobOffer jobOffer,
-                                            @RequestParam Long adminId,
+                                            @RequestParam Long userId,
                                             @RequestParam Long companyId,
                                             @RequestParam Long categoryOfferId,
                                             @RequestParam Long cityId,
-                                            @RequestParam Long sectorId
-                                            ) {
-        return jobOfferService.create(jobOffer, adminId, companyId, categoryOfferId, cityId,sectorId);
+                                            @RequestParam Long sectorId) {
+        return jobOfferService.create(jobOffer, userId, companyId, categoryOfferId, cityId, sectorId);
     }
+
 
     // Mettre à jour une offre d'emploi
     @PutMapping("update")

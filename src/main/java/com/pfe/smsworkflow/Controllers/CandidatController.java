@@ -1,5 +1,7 @@
 package com.pfe.smsworkflow.Controllers;
 
+import com.pfe.smsworkflow.Models.Admin;
+import com.pfe.smsworkflow.Models.Candidat;
 import com.pfe.smsworkflow.Services.CandidatService;
 import com.pfe.smsworkflow.Services.FavorisService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +39,11 @@ public class CandidatController {
     @GetMapping("getCandidatById/{id}")
     public ResponseEntity<?> getCandidatById(@PathVariable Long id) {
         return candidatService.getById(id);
+    }
+
+    @PutMapping("update/{id}")
+    public ResponseEntity<?> updateAdmin(@RequestBody Candidat candidat, @PathVariable Long id) {
+        return candidatService.updateCandidat(candidat, id);
     }
 
 }

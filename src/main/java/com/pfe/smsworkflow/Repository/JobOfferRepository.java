@@ -3,6 +3,7 @@ package com.pfe.smsworkflow.Repository;
 import com.pfe.smsworkflow.Models.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Date;
@@ -11,8 +12,8 @@ import java.util.List;
 @Repository
 public interface JobOfferRepository extends JpaRepository<JobOffer, Long> {
 
-    List<JobOffer> findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrCritereContainingIgnoreCase(String titleKeyword, String descriptionKeyword, String critereKeyword);
-
+    List<JobOffer> findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrCritereContainingIgnoreCaseAndStatusNot(
+            String title, String description, String critere, JobStatus status);
     List<JobOffer> findBySalaryGreaterThanEqual(Float salary);
 
     List<JobOffer> findByExperienceGreaterThanEqual(int experience);
@@ -25,6 +26,8 @@ public interface JobOfferRepository extends JpaRepository<JobOffer, Long> {
 
     List<JobOffer> findByStatus(JobStatus status);
     List<JobOffer> findByCompany_PostCodeContainingIgnoreCase(String postcode);
+    @Query("SELECT j FROM JobOffer j WHERE (LOWER(j.company.postCode) LIKE LOWER(CONCAT('%', :location, '%')) OR LOWER(j.city.name) LIKE LOWER(CONCAT('%', :location, '%'))) AND j.status <> :status")
+    List<JobOffer> findByLocationOrCityContainingIgnoreCaseAndStatusNot(@Param("location") String location, @Param("status") JobStatus status);
 
     List<JobOffer> findByJobType(JobType jobType);
 

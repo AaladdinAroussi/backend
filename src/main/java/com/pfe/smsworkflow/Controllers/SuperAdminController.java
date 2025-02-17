@@ -3,6 +3,7 @@ package com.pfe.smsworkflow.Controllers;
 import com.pfe.smsworkflow.Models.*;
 import com.pfe.smsworkflow.Repository.SuperadminRepository;
 import com.pfe.smsworkflow.Services.*;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -193,6 +194,35 @@ public class SuperAdminController {
                 response.put("status", HttpStatus.NOT_FOUND.value());
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Error: " + e.getMessage());
+            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+    }
+    @PutMapping("update/{id}")
+    public ResponseEntity<?> updateSuperAdmin(@RequestParam SuperAdmin superAdmin, Long id) {
+        try {
+            SuperAdmin existingSuperAdmin = superadminRepository.findById(id)
+                    .orElseThrow(() -> new EntityNotFoundException("SuperAdmin with ID " + id + " not found!"));
+
+            // Mise à jour des champs de SuperAdmin
+            existingSuperAdmin.setFullName(superAdmin.getFullName() == null ? existingSuperAdmin.getFullName() : superAdmin.getFullName());
+            existingSuperAdmin.setPhone(superAdmin.getPhone() == null ? existingSuperAdmin.getPhone() : superAdmin.getPhone());
+            existingSuperAdmin.setEmail(superAdmin.getEmail() == null ? existingSuperAdmin.getEmail() : superAdmin.getEmail());
+            existingSuperAdmin.setCities(superAdmin.getCities() == null ? existingSuperAdmin.getCities() : superAdmin.getCities());
+
+            SuperAdmin updatedSuperAdmin = superadminRepository.save(existingSuperAdmin);
+
+            // Créer une réponse de succès
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Admin updated successfully!");
+            response.put("Superadmin", updatedSuperAdmin);
+            response.put("status", HttpStatus.OK.value());
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("message", "Error: " + e.getMessage());

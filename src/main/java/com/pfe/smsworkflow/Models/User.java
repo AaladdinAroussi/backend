@@ -57,4 +57,13 @@ public class User  extends BaseEntity{
         this.email = email;
         this.password = password;
     }*/
+    public boolean verifyMobileCode(String inputCode, Set<VerificationCode> verificationCodes) {
+        for (VerificationCode verificationCode : verificationCodes) {
+            if (verificationCode.isCodeValid(inputCode)) {
+                this.setIsConfirmMobile(1); // Update isConfirmMobile to 1
+                return true; // Code is valid
+            }
+        }
+        return false; // Code is invalid
+    }
 }

@@ -31,58 +31,72 @@ public class JobOfferServiceIMPL implements JobOfferService {
     @Autowired
     private CategoryOfferRepository categoryOfferRepository;
     @Autowired
-    private AdminRepository adminRepository ;
+    private SuperadminRepository superadminRepository;
+    @Autowired
+    private AdminRepository adminRepository;
 
     // Créer une CategoryOffer
-    public ResponseEntity<?> create(JobOffer jobOffer, Long adminId, Long companyId, Long categoryOfferId, Long cityId, Long sectorId) {
+    public ResponseEntity<?> create(JobOffer jobOffer, Long userId, Long companyId, Long categoryOfferId, Long cityId, Long sectorId) {
         try {
-            // Retrieve the admin using the provided ID
-            Admin admin = adminRepository.findById(adminId)
-                    .orElseThrow(() -> new RuntimeException("Admin not found"));
+            // Vérifier si l'utilisateur est un Admin ou un SuperAdmin
+            Optional<Admin> optionalAdmin = adminRepository.findById(userId);
+            Optional<SuperAdmin> optionalSuperAdmin = superadminRepository.findById(userId);
 
-            // Retrieve the company using the provided ID
+            if (optionalAdmin.isEmpty() && optionalSuperAdmin.isEmpty()) {
+                throw new RuntimeException("User not found or unauthorized");
+            }
+
+            // Récupérer l'entreprise
             Company company = companyRepository.findById(companyId)
                     .orElseThrow(() -> new RuntimeException("Company not found"));
 
-            // Check if the company belongs to the admin
-            if (!company.getAdmin().getId().equals(admin.getId())) {
-                throw new RuntimeException("Admin does not have permission to add a job offer for this company");
+            // Si c'est un Admin, vérifier qu'il possède bien l'entreprise
+            if (optionalAdmin.isPresent()) {
+                Admin admin = optionalAdmin.get();
+                if (!company.getAdmin().getId().equals(admin.getId())) {
+                    throw new RuntimeException("Admin does not have permission to add a job offer for this company");
+                }
+                jobOffer.setAdmin(admin);
+
+                // Si l'offre est créée par un Admin, elle est "PENDING"
+                jobOffer.setStatus(JobStatus.PENDING);
+            } else {
+                // Si c'est un SuperAdmin, il peut créer des offres sans restriction
+                SuperAdmin superAdmin = optionalSuperAdmin.get();
+                jobOffer.setSuperAdmin(superAdmin);
+
+                // Si l'offre est créée par un SuperAdmin, elle est "OPEN"
+                jobOffer.setStatus(JobStatus.OPEN);
             }
 
-            // Retrieve other entities using the provided IDs
+            // Récupérer les autres entités associées
             CategoryOffer categoryOffer = categoryOfferRepository.findById(categoryOfferId)
                     .orElseThrow(() -> new RuntimeException("CategoryOffer not found"));
             City city = cityRepository.findById(cityId)
                     .orElseThrow(() -> new RuntimeException("City not found"));
-
-            // Retrieve the sector using the provided ID
             Sector sector = sectorRepository.findById(sectorId)
                     .orElseThrow(() -> new RuntimeException("Sector not found"));
 
-            // Assign entities to the job offer
-            jobOffer.setAdmin(admin);
+            // Associer les entités à l'offre d'emploi
             jobOffer.setCompany(company);
             jobOffer.setCategoryOffer(categoryOffer);
             jobOffer.setCity(city);
-            jobOffer.setSector(sector); // Assign the sector to the job offer
+            jobOffer.setSector(sector);
 
-            // Automatically assign the creation date
+            // Définir la date de création
             jobOffer.setDateCreation(new Date());
 
-            // Set the closing date to 30 days from now if not provided
+            // Définir une date de clôture par défaut (30 jours)
             if (jobOffer.getClosingDate() == null) {
                 Calendar calendar = Calendar.getInstance();
                 calendar.add(Calendar.DAY_OF_MONTH, 30);
                 jobOffer.setClosingDate(calendar.getTime());
             }
 
-            // Set the initial status of the job offer
-            jobOffer.setStatus(JobStatus.PENDING);
-
-            // Save the job offer in the database
+            // Sauvegarder l'offre
             JobOffer savedJobOffer = jobOfferRepository.save(jobOffer);
 
-            // Create a success response
+            // Réponse de succès
             Map<String, Object> response = new HashMap<>();
             response.put("message", "JobOffer created successfully!");
             response.put("jobOffer", savedJobOffer);
@@ -90,14 +104,15 @@ public class JobOfferServiceIMPL implements JobOfferService {
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
-            // Create an error response
+            // Réponse d'erreur
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("message", "Error: " + e.getMessage());
             errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
 
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
-    }    @Override
+    }
+
     public ResponseEntity<?> getAll() {
         try {
             // Récupérer toutes les offres d'emploi, sauf celles ayant le statut "PENDING"
@@ -326,6 +341,7 @@ public class JobOfferServiceIMPL implements JobOfferService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
+
     //pour recruteur
     @Override
     public ResponseEntity<?> getPendingJobOffers() {
@@ -350,6 +366,7 @@ public class JobOfferServiceIMPL implements JobOfferService {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
+
     @Override
     public ResponseEntity<?> getPendingJobOffersByAdminId(Long adminId) {
         try {
@@ -398,6 +415,7 @@ public class JobOfferServiceIMPL implements JobOfferService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
+
     @Override
     public ResponseEntity<?> markJobAsFilled(Long id) {
         try {
@@ -445,6 +463,7 @@ public class JobOfferServiceIMPL implements JobOfferService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
+
     @Override
     public ResponseEntity<List<JobOffer>> searchJobOffers(String keyword) {
         // Check if the keyword is null or empty
@@ -454,8 +473,8 @@ public class JobOfferServiceIMPL implements JobOfferService {
         }
 
         // Perform the search
-        List<JobOffer> jobOffers = jobOfferRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrCritereContainingIgnoreCase(
-                keyword, keyword, keyword);
+        List<JobOffer> jobOffers = jobOfferRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrCritereContainingIgnoreCaseAndStatusNot(
+                keyword, keyword, keyword, JobStatus.PENDING);
 
         // Check if any job offers were found
         if (jobOffers.isEmpty()) {
@@ -628,9 +647,6 @@ public class JobOfferServiceIMPL implements JobOfferService {
 //        calendar.set(Calendar.DAY_OF_MONTH, 1); // Set to the start of the month
 //        return calendar.getTime();
 //    }
-
-
-
     @Override
     public ResponseEntity<?> filterByLocation(String locationOrPostcode) {
         try {
@@ -760,7 +776,6 @@ public class JobOfferServiceIMPL implements JobOfferService {
     }
 
 
-
     @Override
     public ResponseEntity<?> getAllCandidatByOfferId(Long offerId) {
         try {
@@ -798,6 +813,7 @@ public class JobOfferServiceIMPL implements JobOfferService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
+
     public ResponseEntity<?> getCandidatById(Long candidatId) {
         try {
             // Recherche du candidat par son ID
@@ -830,51 +846,59 @@ public class JobOfferServiceIMPL implements JobOfferService {
     @Override
     public ResponseEntity<?> filterJobOffers(String keyword, List<String> jobTypes, String category, String location, Integer experienceLevel, Float salary) {
         try {
-            // Start with an empty list of job offers
-            List<JobOffer> filteredJobOffers = new ArrayList<>();
+            List<JobOffer> filteredJobOffers;
 
-            // If a keyword is provided, search for job offers by keyword
-            if (keyword != null && !keyword.trim().isEmpty()) {
-                filteredJobOffers = jobOfferRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrCritereContainingIgnoreCase(
-                        keyword, keyword, keyword);
-            } else {
-                // If no keyword, fetch all job offers
+            // Check if all fields are null or empty
+            if ((keyword == null || keyword.trim().isEmpty()) &&
+                    (jobTypes == null || jobTypes.isEmpty()) &&
+                    (category == null || category.trim().isEmpty()) &&
+                    (location == null || location.trim().isEmpty()) &&
+                    (experienceLevel == null) &&
+                    (salary == null)) {
                 filteredJobOffers = jobOfferRepository.findByStatusNot(JobStatus.PENDING);
-            }
+            } else {
+                if (keyword != null && !keyword.trim().isEmpty()) {
+                    filteredJobOffers = jobOfferRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrCritereContainingIgnoreCaseAndStatusNot(
+                            keyword, keyword, keyword, JobStatus.PENDING);
+                } else {
+                    filteredJobOffers = jobOfferRepository.findByStatusNot(JobStatus.PENDING);
+                }
 
-            // Apply job type filter
-            if (jobTypes != null && !jobTypes.isEmpty()) {
-                filteredJobOffers = filteredJobOffers.stream()
-                        .filter(offer -> jobTypes.contains(offer.getJobType().name()))
-                        .collect(Collectors.toList());
-            }
+                // Apply job type filter
+                if (jobTypes != null && !jobTypes.isEmpty()) {
+                    filteredJobOffers = filteredJobOffers.stream()
+                            .filter(offer -> jobTypes.contains(offer.getJobType().name()))
+                            .collect(Collectors.toList());
+                }
 
-            // Apply category filter
-            if (category != null && !category.trim().isEmpty()) {
-                filteredJobOffers = filteredJobOffers.stream()
-                        .filter(offer -> offer.getCategoryOffer().getName().equalsIgnoreCase(category))
-                        .collect(Collectors.toList());
-            }
+                // Apply category filter
+                if (category != null && !category.trim().isEmpty()) {
+                    filteredJobOffers = filteredJobOffers.stream()
+                            .filter(offer -> offer.getCategoryOffer().getName().equalsIgnoreCase(category))
+                            .collect(Collectors.toList());
+                }
 
-            // Apply location filter
-            if (location != null && !location.trim().isEmpty()) {
-                filteredJobOffers = filteredJobOffers.stream()
-                        .filter(offer -> offer.getCity().getName().equalsIgnoreCase(location))
-                        .collect(Collectors.toList());
-            }
+                // Apply location filter using the new repository method
+                if (location != null && !location.trim().isEmpty()) {
+                    List<JobOffer> locationFilteredOffers = jobOfferRepository.findByLocationOrCityContainingIgnoreCaseAndStatusNot(location, JobStatus.PENDING);
+                    filteredJobOffers = filteredJobOffers.stream()
+                            .filter(locationFilteredOffers::contains)
+                            .collect(Collectors.toList());
+                }
 
-            // Apply experience level filter
-            if (experienceLevel != null) {
-                filteredJobOffers = filteredJobOffers.stream()
-                        .filter(offer -> offer.getExperience() <= experienceLevel)
-                        .collect(Collectors.toList());
-            }
+                // Apply experience level filter
+                if (experienceLevel != null) {
+                    filteredJobOffers = filteredJobOffers.stream()
+                            .filter(offer -> offer.getExperience() <= experienceLevel)
+                            .collect(Collectors.toList());
+                }
 
-            // Apply salary filter
-            if (salary != null) {
-                filteredJobOffers = filteredJobOffers.stream()
-                        .filter(offer -> offer.getSalary() >= salary)
-                        .collect(Collectors.toList());
+                // Apply salary filter
+                if (salary != null) {
+                    filteredJobOffers = filteredJobOffers.stream()
+                            .filter(offer -> offer.getSalary() >= salary)
+                            .collect(Collectors.toList());
+                }
             }
 
             // Check if any job offers were found
@@ -893,6 +917,4 @@ public class JobOfferServiceIMPL implements JobOfferService {
             return createErrorResponse("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
-
 }

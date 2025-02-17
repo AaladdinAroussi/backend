@@ -9,6 +9,8 @@ import com.pfe.smsworkflow.Repository.VerificationCodeRepository;
 import com.pfe.smsworkflow.Security.Services.RefreshTokenService;
 import com.pfe.smsworkflow.Security.Services.UserDetailsImpl;
 import com.pfe.smsworkflow.Security.jwt.JwtUtils;
+import com.pfe.smsworkflow.Services.CandidatService;
+import com.pfe.smsworkflow.Services.UserService;
 import com.pfe.smsworkflow.exception.TokenRefreshException;
 import com.pfe.smsworkflow.payload.request.LoginRequest;
 import com.pfe.smsworkflow.payload.request.SignupRequest;
@@ -28,9 +30,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -46,13 +50,22 @@ public class AuthController {
     @Autowired
     UsersRepository userRepository;
     @Autowired
+    private UserDetailsService userDetailsService;
+    @Autowired
+    UserService userService;
+    @Autowired
     VerificationCodeRepository verificationCodeRepository;
 
     @Autowired
     RoleRepository roleRepository;
+    @Autowired
+    CandidatService candidatService;
 
     @Autowired
     PasswordEncoder encoder;
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
 
     @Autowired
     JwtUtils jwtUtils;
@@ -61,10 +74,7 @@ public class AuthController {
     RefreshTokenService refreshTokenService;
 
 
-    private String generateVerificationCode() {
-        int code = ThreadLocalRandom.current().nextInt(100000, 1000000); // Generates a random number between 100000 and 999999
-        return String.valueOf(code); // Convert the integer to a String
-    }
+
 
     @PostMapping("/signupCandidat")
     public ResponseEntity<?> registerCandidat(@Valid @RequestBody SignupRequest signUpRequest) {
@@ -94,13 +104,7 @@ public class AuthController {
 
         // Sauvegarder le candidat (enregistre d'abord dans `users`, puis `candidat`)
         userRepository.save(candidat);
-        // Créer un code de vérification
-        VerificationCode verificationCode = new VerificationCode();
-        verificationCode.setCandidat(candidat); // Associer le code de vérification à l'utilisateur
-        verificationCode.setCode(generateVerificationCode()); // Méthode pour générer un code
-        verificationCode.setCodeStatus(0); // 0 = non envoyé
-        // Sauvegarder le code de vérification
-        verificationCodeRepository.save(verificationCode);
+
         return ResponseEntity.ok(new MessageResponse("Candidat registered successfully with ROLE_CANDIDAT!"));
     }
     @PostMapping("/signupAdmin")
@@ -136,50 +140,118 @@ public class AuthController {
         userRepository.save(admin);
         // Créer un code de vérification
 
-        VerificationCode verificationCode = new VerificationCode();
-        verificationCode.setAdmin(admin); // Associer le code de vérification à l'utilisateur
-        verificationCode.setCode(generateVerificationCode()); // Méthode pour générer un code
-        verificationCode.setCodeStatus(0); // 0 = non envoyé
-        // Sauvegarder le code de vérification
-        verificationCodeRepository.save(verificationCode);
 
         return ResponseEntity.ok(new MessageResponse("Admin registered successfully with ROLE_ADMIN!"));
     }
-    @PostMapping("/signin")
-    public ResponseEntity<?> authenticateUser (@Valid @RequestBody LoginRequest loginRequest) {
-        Optional<User> user;
+    @PostMapping("/resendCode")
+    public ResponseEntity<Map<String, String>> resendVerificationCode(@RequestParam Long userId) {
+        try {
+            userService.resendVerificationCode(userId);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Verification code resent successfully.");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+    private boolean isPasswordValid(User user, String rawPassword) {
+        return passwordEncoder.matches(rawPassword, user.getPassword());
+    }
 
-        // Vérifier si l'utilisateur se connecte avec un téléphone ou un email
-        if (loginRequest.getLogin() != null && !loginRequest.getLogin().isEmpty()) {
-            // Check if the login is a phone number or an email
-            if (loginRequest.getLogin().matches("\\d+")) { // If it's all digits, treat it as a phone number
-                user = userRepository.findByPhone(loginRequest.getLogin());
-            } else {
-                user = Optional.ofNullable(userRepository.findByEmail(loginRequest.getLogin()));
-            }
-        } else {
+    @PostMapping("/signin")
+    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+        // Vérification si login (email ou téléphone) est fourni
+        if (loginRequest.getLogin() == null || loginRequest.getLogin().isEmpty()) {
             return ResponseEntity.badRequest().body("Veuillez fournir un email ou un numéro de téléphone.");
         }
 
-        if (user.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Utilisateur non trouvé");
+        // Recherche de l'utilisateur par email ou téléphone
+        Optional<User> optionalUser;
+        if (loginRequest.getLogin().matches("\\d+")) { // Si c'est un numéro
+            optionalUser = userRepository.findByPhone(loginRequest.getLogin());
+        } else { // Sinon, c'est un email
+            optionalUser = Optional.ofNullable(userRepository.findByEmail(loginRequest.getLogin()));
         }
 
-        // Authentifier avec l'utilisateur trouvé
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(user.get().getPhone(), loginRequest.getPassword()));
+        // Vérification si l'utilisateur existe
+        if (optionalUser.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Erreur: Login ou mot de passe incorrect.");
+        }
+        else {
+            // Vérification du mot de passe
+            if (!isPasswordValid(optionalUser.get(), loginRequest.getPassword())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Erreur: Login ou mot de passe incorrect.");
+            }
+            // Vérification si le compte est bloqué après validation du mot de passe
+            if (optionalUser.get().getStatus() == UserStatus.BLOCKED) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Erreur: Votre compte est bloqué. Contactez l'administrateur.");
+            }
+        }
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        User user = optionalUser.get();
+
+
+
+
+
+        // Vérification si le numéro est confirmé
+        if (user.getIsConfirmMobile() == 0) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Erreur: Numéro de mobile non confirmé.");
+        }
+
+        // Génération du token JWT
+        UserDetailsImpl userDetails = (UserDetailsImpl) userDetailsService.loadUserByUsername(user.getPhone());
         String jwt = jwtUtils.generateJwtToken(userDetails);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getId());
 
+        // Récupération des rôles
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
 
+        // Retourner la réponse avec le token
         return ResponseEntity.ok(new JwtResponse(jwt, refreshToken.getToken(), userDetails.getId(),
                 userDetails.getPhone(), userDetails.getEmail(), roles));
+    }
+
+
+    @PostMapping("/verifyMobileCode")
+    public ResponseEntity<?> verifyMobileCode(@RequestParam String phone, @RequestParam String code) {
+        // Find the User by phone number
+        Optional<User> optionalUser  = userRepository.findByPhone(phone);
+
+        if (optionalUser .isEmpty()) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: User not found!"));
+        }
+
+        User user = optionalUser .get();
+
+        // Check if the user is a Candidat or Admin
+        boolean isCodeValid = false;
+
+        if (user instanceof Candidat) {
+            Candidat candidat = (Candidat) user; // Cast to Candidat
+            // Verify the code using the method in User class
+            isCodeValid = user.verifyMobileCode(code, candidat.getVerificationCodes());
+        } else if (user instanceof Admin) {
+            Admin admin = (Admin) user; // Cast to Admin
+            // Assuming Admin also has verification codes, verify the code
+            isCodeValid = user.verifyMobileCode(code, admin.getVerificationCodes());
+        } else {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: User type not supported for verification!"));
+        }
+
+        if (isCodeValid) {
+            // Optionally, save the user if needed
+            userRepository.save(user);
+            return ResponseEntity.ok(new MessageResponse("Mobile number confirmed successfully!"));
+        } else {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Invalid verification code!"));
+        }
     }
     @PostMapping("/signout")
     public ResponseEntity<?> logoutUser (@Valid @RequestBody TokenRefreshRequest tokenRefreshRequest) {
@@ -298,6 +370,5 @@ public class AuthController {
             return ResponseEntity.ok(new MessageResponse("Password changed"));
         }
     }
-
 
 }

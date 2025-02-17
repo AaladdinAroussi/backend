@@ -10,7 +10,8 @@ import java.util.List;
 public interface CompanyService {
     ResponseEntity<?> create(Company company, Long adminId);
     ResponseEntity<?> getAll();
-    ResponseEntity<?> getAllCompanyByAdminId(Long adminId);
+    ResponseEntity<?> getAllCompanyByUserId(Long userId, String role);
+
     ResponseEntity<?> getById(Long id);
     ResponseEntity<?> updateCompany(Company company,Long id);
     ResponseEntity<?> delete(Long id);
