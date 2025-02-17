@@ -1,5 +1,7 @@
 package com.pfe.smsworkflow.Services.IMPL;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pfe.smsworkflow.Models.Candidat;
 import com.pfe.smsworkflow.Models.User;
 import com.pfe.smsworkflow.Models.VerificationCode;
@@ -24,6 +26,7 @@ public class CandidatServiceIMPL implements CandidatService {
     private CandidatRepository candidatRepository;
     @Autowired
     private UsersRepository userRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Créer un Candidat
     @Override
@@ -109,21 +112,32 @@ public class CandidatServiceIMPL implements CandidatService {
                     .orElseThrow(() -> new EntityNotFoundException("Candidat with ID " + id + " not found!"));
 
             // Update basic fields
-            existingCandidat.setFullName(candidat.getFullName() == null ? existingCandidat.getFullName() : candidat.getFullName());
-            existingCandidat.setPhone(candidat.getPhone() == null ? existingCandidat.getPhone() : candidat.getPhone());
-            existingCandidat.setPassword(candidat.getPassword() == null ? existingCandidat.getPassword() : candidat.getPassword());
-            existingCandidat.setEmail(candidat.getEmail() == null ? existingCandidat.getEmail() : candidat.getEmail());
-            existingCandidat.setRoles(candidat.getRoles() == null ? existingCandidat.getRoles() : candidat.getRoles());
-            existingCandidat.setCities(candidat.getCities() == null ? existingCandidat.getCities() : candidat.getCities());
-            existingCandidat.setExperience(candidat.getExperience() == 0 ? existingCandidat.getExperience() : candidat.getExperience());
-            existingCandidat.setLevel(candidat.getLevel() == null ? existingCandidat.getLevel() : candidat.getLevel());
-            existingCandidat.setSector(candidat.getSector() == null ? existingCandidat.getSector() : candidat.getSector());
+            existingCandidat.setFullName(candidat.getFullName() != null ? candidat.getFullName() : existingCandidat.getFullName());
+            existingCandidat.setPhone(candidat.getPhone() != null ? candidat.getPhone() : existingCandidat.getPhone());
+            existingCandidat.setPassword(candidat.getPassword() != null ? candidat.getPassword() : existingCandidat.getPassword());
+            existingCandidat.setEmail(candidat.getEmail() != null ? candidat.getEmail() : existingCandidat.getEmail());
+            existingCandidat.setRoles(candidat.getRoles() != null ? candidat.getRoles() : existingCandidat.getRoles());
+            existingCandidat.setCities(candidat.getCities() != null ? candidat.getCities() : existingCandidat.getCities());
+            existingCandidat.setExperience(candidat.getExperience() != 0 ? candidat.getExperience() : existingCandidat.getExperience());
+            existingCandidat.setLevel(candidat.getLevel() != null ? candidat.getLevel() : existingCandidat.getLevel());
+            existingCandidat.setSector(candidat.getSector() != null ? candidat.getSector() : existingCandidat.getSector());
 
-            // Update candidateDetails if provided
-            /*   if (candidat.getCandidateDetails() != null) {
-                // Convert the incoming CandidateDetails to JSON and set it
-                existingCandidat.setCandidateDetailsFromObject(candidat.getCandidateDetailsAsObject());
-            }*/
+            // Update details using the provided methods
+            if (candidat.getDetails() != null && !candidat.getDetails().isEmpty()) {
+                // Assuming you have a method to extract details from the JSON string
+                Map<String, Object> detailsMap = objectMapper.readValue(candidat.getDetails(), Map.class);
+                existingCandidat.setDetailsFromForm(
+                        (String) detailsMap.get("age"),
+                        (String) detailsMap.get("city"),
+                        (String) detailsMap.get("address"),
+                        (String) detailsMap.get("education"),
+                        (String) detailsMap.get("languages"),
+                        (String) detailsMap.get("bio"),
+                        (String) detailsMap.get("website"),
+                        (String) detailsMap.get("github"),
+                        (String) detailsMap.get("linkedin")
+                );
+            }
 
             Candidat updatedCandidat = candidatRepository.save(existingCandidat);
 
@@ -134,11 +148,20 @@ public class CandidatServiceIMPL implements CandidatService {
             response.put("status", HttpStatus.OK.value());
 
             return ResponseEntity.ok(response);
+        } catch (EntityNotFoundException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        } catch (JsonProcessingException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Error processing JSON: " + e.getMessage());
+            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("message", "Error: " + e.getMessage());
             errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
-
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }

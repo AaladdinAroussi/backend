@@ -199,6 +199,18 @@ public class AuthController {
 
         // Vérification si le numéro est confirmé
         if (user.getIsConfirmMobile() == 0) {
+            // Créer un code de vérification et l'associer avec le Candidat ou Admin
+            VerificationCode verificationCode = new VerificationCode();
+            verificationCode.setCode(userService.generateVerificationCode()); // Générer le code de vérification
+            if (user instanceof Candidat) {
+                verificationCode.setCandidat((Candidat) user);
+            } else if (user instanceof Admin) {
+                verificationCode.setAdmin((Admin) user);
+            }
+
+            verificationCode.setCodeStatus(CodeStatus.NOT_SENT); // Vous pouvez ajuster en fonction de la logique de votre code
+
+            verificationCodeRepository.save(verificationCode); // Sauvegarder le code
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Erreur: Numéro de mobile non confirmé.");
         }
