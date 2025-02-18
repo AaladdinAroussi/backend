@@ -2,9 +2,7 @@ package com.pfe.smsworkflow.Services.IMPL;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pfe.smsworkflow.Models.Candidat;
-import com.pfe.smsworkflow.Models.User;
-import com.pfe.smsworkflow.Models.VerificationCode;
+import com.pfe.smsworkflow.Models.*;
 import com.pfe.smsworkflow.Repository.CandidatRepository;
 import com.pfe.smsworkflow.Repository.UsersRepository;
 import com.pfe.smsworkflow.Services.CandidatService;
@@ -14,11 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class CandidatServiceIMPL implements CandidatService {
@@ -105,43 +101,61 @@ public class CandidatServiceIMPL implements CandidatService {
     }
 
     // Mettre à jour un Candidat
+    @Transactional
     @Override
     public ResponseEntity<?> updateCandidat(Candidat candidat, Long id) {
         try {
             Candidat existingCandidat = candidatRepository.findById(id)
                     .orElseThrow(() -> new EntityNotFoundException("Candidat with ID " + id + " not found!"));
 
-            // Update basic fields
-            existingCandidat.setFullName(candidat.getFullName() != null ? candidat.getFullName() : existingCandidat.getFullName());
-            existingCandidat.setPhone(candidat.getPhone() != null ? candidat.getPhone() : existingCandidat.getPhone());
-            existingCandidat.setPassword(candidat.getPassword() != null ? candidat.getPassword() : existingCandidat.getPassword());
-            existingCandidat.setEmail(candidat.getEmail() != null ? candidat.getEmail() : existingCandidat.getEmail());
-            existingCandidat.setRoles(candidat.getRoles() != null ? candidat.getRoles() : existingCandidat.getRoles());
-            existingCandidat.setCities(candidat.getCities() != null ? candidat.getCities() : existingCandidat.getCities());
-            existingCandidat.setExperience(candidat.getExperience() != 0 ? candidat.getExperience() : existingCandidat.getExperience());
-            existingCandidat.setLevel(candidat.getLevel() != null ? candidat.getLevel() : existingCandidat.getLevel());
-            existingCandidat.setSector(candidat.getSector() != null ? candidat.getSector() : existingCandidat.getSector());
+            // Mise à jour des champs de base
+            if (candidat.getFullName() != null) existingCandidat.setFullName(candidat.getFullName());
+            if (candidat.getPhone() != null) existingCandidat.setPhone(candidat.getPhone());
+            if (candidat.getEmail() != null) existingCandidat.setEmail(candidat.getEmail());
+            if (candidat.getExperience() != 0) existingCandidat.setExperience(candidat.getExperience());
+            if (candidat.getLevel() != null) existingCandidat.setLevel(candidat.getLevel());
+            if (candidat.getSector() != null) existingCandidat.setSector(candidat.getSector());
+            if (candidat.getCities() != null) existingCandidat.setCities(candidat.getCities());
 
-            // Update details using the provided methods
-            if (candidat.getDetails() != null && !candidat.getDetails().isEmpty()) {
-                // Assuming you have a method to extract details from the JSON string
-                Map<String, Object> detailsMap = objectMapper.readValue(candidat.getDetails(), Map.class);
-                existingCandidat.setDetailsFromForm(
-                        (String) detailsMap.get("age"),
-                        (String) detailsMap.get("city"),
-                        (String) detailsMap.get("address"),
-                        (String) detailsMap.get("education"),
-                        (String) detailsMap.get("languages"),
-                        (String) detailsMap.get("bio"),
-                        (String) detailsMap.get("website"),
-                        (String) detailsMap.get("github"),
-                        (String) detailsMap.get("linkedin")
-                );
+            // Mise à jour des rôles uniquement si les rôles sont passés dans la requête
+            if (candidat.getRoles() != null) {
+                Set<Role> currentRoles = existingCandidat.getRoles();
+                Set<Role> updatedRoles = candidat.getRoles();
+
+                // Ajouter les nouveaux rôles sans supprimer les existants
+                for (Role role : updatedRoles) {
+                    if (!currentRoles.contains(role)) {
+                        currentRoles.add(role); // Ajouter un rôle si il n'est pas déjà présent
+                    }
+                }
+                existingCandidat.setRoles(currentRoles); // Mettre à jour les rôles
+            }
+
+            // Mise à jour des détails (OneToOne)
+            if (candidat.getDetails() != null) {
+                CandidateDetails existingDetails = existingCandidat.getDetails();
+                CandidateDetails newDetails = candidat.getDetails();
+
+                if (existingDetails == null) {
+                    existingDetails = new CandidateDetails();
+                }
+                if (newDetails.getLanguages() != null) existingDetails.setLanguages(newDetails.getLanguages());
+                if (newDetails.getAge() != null) existingDetails.setAge(newDetails.getAge());
+                if (newDetails.getCity() != null) existingDetails.setCity(newDetails.getCity());
+                if (newDetails.getAddress() != null) existingDetails.setAddress(newDetails.getAddress());
+                if (newDetails.getEducation() != null) existingDetails.setEducation(newDetails.getEducation());
+                if (newDetails.getLanguages() != null) existingDetails.setLanguages(newDetails.getLanguages());
+                if (newDetails.getBio() != null) existingDetails.setBio(newDetails.getBio());
+                if (newDetails.getWebsite() != null) existingDetails.setWebsite(newDetails.getWebsite());
+                if (newDetails.getGithub() != null) existingDetails.setGithub(newDetails.getGithub());
+                if (newDetails.getLinkedIn() != null) existingDetails.setLinkedIn(newDetails.getLinkedIn());
+
+                existingCandidat.setDetails(existingDetails);
             }
 
             Candidat updatedCandidat = candidatRepository.save(existingCandidat);
 
-            // Create a success response
+            // Création de la réponse
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Candidat updated successfully!");
             response.put("candidat", updatedCandidat);
@@ -149,22 +163,14 @@ public class CandidatServiceIMPL implements CandidatService {
 
             return ResponseEntity.ok(response);
         } catch (EntityNotFoundException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", e.getMessage());
-            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-        } catch (JsonProcessingException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Error processing JSON: " + e.getMessage());
-            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", e.getMessage(), "status", HttpStatus.NOT_FOUND.value()));
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Error: " + e.getMessage());
-            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Error: " + e.getMessage(), "status", HttpStatus.BAD_REQUEST.value()));
         }
     }
+
     // Supprimer un Candidat
     @Override
     public ResponseEntity<?> delete(Long id) {
