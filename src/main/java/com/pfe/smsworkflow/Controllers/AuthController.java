@@ -365,7 +365,7 @@ public class AuthController {
     }
 
     @PostMapping("/changePassword")
-    public ResponseEntity<?> changePassword(String token, String oldPassword, String newPassword) {
+    public ResponseEntity<?> changePassword(@RequestParam String token, @RequestParam String oldPassword, @RequestParam String newPassword) {
         String email = jwtUtils.getEmailFromJwtToken(token);
         User user = userRepository.findByEmail(email);
         if (!encoder.matches(oldPassword,user.getPassword())) {

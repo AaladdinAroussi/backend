@@ -2,6 +2,7 @@ package com.pfe.smsworkflow.Services.IMPL;
 
 import com.pfe.smsworkflow.Models.Admin;
 import com.pfe.smsworkflow.Repository.AdminRepository;
+import com.pfe.smsworkflow.Repository.UsersRepository;
 import com.pfe.smsworkflow.Services.AdminService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,8 @@ public class AdminServiceIMPL implements AdminService {
 
     @Autowired
     private AdminRepository adminRepository;
+    @Autowired
+    private UsersRepository userRepository;
 
     // Créer un Admin
     @Override
@@ -102,7 +105,20 @@ public class AdminServiceIMPL implements AdminService {
         try {
             Admin existingAdmin = adminRepository.findById(id)
                     .orElseThrow(() -> new EntityNotFoundException("Admin with ID " + id + " not found!"));
-
+            // Vérifiez l'unicité de l'email
+            if (admin.getEmail() != null && !admin.getEmail().equals(existingAdmin.getEmail())) {
+                if (userRepository.existsByEmail(admin.getEmail())) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(Map.of("message", "Email already in use!", "status", HttpStatus.BAD_REQUEST.value()));
+                }
+            }
+            // Vérifiez l'unicité du téléphone
+            if (admin.getPhone() != null && !admin.getPhone().equals(existingAdmin.getPhone())) {
+                if (userRepository.existsByPhone(admin.getPhone())) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(Map.of("message", "Phone number already in use!", "status", HttpStatus.BAD_REQUEST.value()));
+                }
+            }
             // Mise à jour des champs de l'Admin
             existingAdmin.setFullName(admin.getFullName() == null ? existingAdmin.getFullName() : admin.getFullName());
             existingAdmin.setPhone(admin.getPhone() == null ? existingAdmin.getPhone() : admin.getPhone());

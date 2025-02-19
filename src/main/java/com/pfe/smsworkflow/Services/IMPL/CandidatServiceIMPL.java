@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pfe.smsworkflow.Models.*;
 import com.pfe.smsworkflow.Repository.CandidatRepository;
+import com.pfe.smsworkflow.Repository.SectorRepository;
 import com.pfe.smsworkflow.Repository.UsersRepository;
 import com.pfe.smsworkflow.Services.CandidatService;
 import com.pfe.smsworkflow.payload.response.MessageResponse;
@@ -22,6 +23,8 @@ public class CandidatServiceIMPL implements CandidatService {
     private CandidatRepository candidatRepository;
     @Autowired
     private UsersRepository userRepository;
+    @Autowired
+    private SectorRepository sectorRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Créer un Candidat
@@ -101,20 +104,41 @@ public class CandidatServiceIMPL implements CandidatService {
     }
 
     // Mettre à jour un Candidat
-    @Transactional
+
     @Override
     public ResponseEntity<?> updateCandidat(Candidat candidat, Long id) {
         try {
             Candidat existingCandidat = candidatRepository.findById(id)
                     .orElseThrow(() -> new EntityNotFoundException("Candidat with ID " + id + " not found!"));
-
+            // Vérifiez l'unicité de l'email
+            if (candidat.getEmail() != null && !candidat.getEmail().equals(existingCandidat.getEmail())) {
+                if (userRepository.existsByEmail(candidat.getEmail())) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(Map.of("message", "Email already in use!", "status", HttpStatus.BAD_REQUEST.value()));
+                }
+            }
+            // Vérifiez l'unicité du téléphone
+            if (candidat.getPhone() != null && !candidat.getPhone().equals(existingCandidat.getPhone())) {
+                if (userRepository.existsByPhone(candidat.getPhone())) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(Map.of("message", "Phone number already in use!", "status", HttpStatus.BAD_REQUEST.value()));
+                }
+            }
             // Mise à jour des champs de base
             if (candidat.getFullName() != null) existingCandidat.setFullName(candidat.getFullName());
             if (candidat.getPhone() != null) existingCandidat.setPhone(candidat.getPhone());
             if (candidat.getEmail() != null) existingCandidat.setEmail(candidat.getEmail());
             if (candidat.getExperience() != 0) existingCandidat.setExperience(candidat.getExperience());
             if (candidat.getLevel() != null) existingCandidat.setLevel(candidat.getLevel());
-            if (candidat.getSector() != null) existingCandidat.setSector(candidat.getSector());
+            if (candidat.getSector() != null) {
+
+                Sector existingSector = sectorRepository.findById(candidat.getSector().getId())
+
+                        .orElseThrow(() -> new EntityNotFoundException("Sector not found!"));
+
+                existingCandidat.setSector(existingSector);
+
+            }
             if (candidat.getCities() != null) existingCandidat.setCities(candidat.getCities());
 
             // Mise à jour des rôles uniquement si les rôles sont passés dans la requête

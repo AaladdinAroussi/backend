@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,23 +23,23 @@ public class JobOfferServiceIMPL implements JobOfferService {
     private SectorRepository sectorRepository;
     @Autowired
     private CompanyRepository companyRepository;
-
     @Autowired
     private CityRepository cityRepository;
     @Autowired
     private CandidatRepository candidatRepository;
-
     @Autowired
     private CategoryOfferRepository categoryOfferRepository;
     @Autowired
     private SuperadminRepository superadminRepository;
     @Autowired
     private AdminRepository adminRepository;
+    @Autowired
+    private NotificationRepository notificationRepository;
+    @Autowired
+    private NotificationService notificationService;  // Ajout du service de notification
 
-    // Créer une CategoryOffer
     public ResponseEntity<?> create(JobOffer jobOffer, Long userId, Long companyId, Long categoryOfferId, Long cityId, Long sectorId) {
         try {
-            // Vérifier si l'utilisateur est un Admin ou un SuperAdmin
             Optional<Admin> optionalAdmin = adminRepository.findById(userId);
             Optional<SuperAdmin> optionalSuperAdmin = superadminRepository.findById(userId);
 
@@ -46,30 +47,22 @@ public class JobOfferServiceIMPL implements JobOfferService {
                 throw new RuntimeException("User not found or unauthorized");
             }
 
-            // Récupérer l'entreprise
             Company company = companyRepository.findById(companyId)
                     .orElseThrow(() -> new RuntimeException("Company not found"));
 
-            // Si c'est un Admin, vérifier qu'il possède bien l'entreprise
             if (optionalAdmin.isPresent()) {
                 Admin admin = optionalAdmin.get();
                 if (!company.getAdmin().getId().equals(admin.getId())) {
                     throw new RuntimeException("Admin does not have permission to add a job offer for this company");
                 }
                 jobOffer.setAdmin(admin);
-
-                // Si l'offre est créée par un Admin, elle est "PENDING"
                 jobOffer.setStatus(JobStatus.PENDING);
             } else {
-                // Si c'est un SuperAdmin, il peut créer des offres sans restriction
                 SuperAdmin superAdmin = optionalSuperAdmin.get();
                 jobOffer.setSuperAdmin(superAdmin);
-
-                // Si l'offre est créée par un SuperAdmin, elle est "OPEN"
                 jobOffer.setStatus(JobStatus.OPEN);
             }
 
-            // Récupérer les autres entités associées
             CategoryOffer categoryOffer = categoryOfferRepository.findById(categoryOfferId)
                     .orElseThrow(() -> new RuntimeException("CategoryOffer not found"));
             City city = cityRepository.findById(cityId)
@@ -77,26 +70,35 @@ public class JobOfferServiceIMPL implements JobOfferService {
             Sector sector = sectorRepository.findById(sectorId)
                     .orElseThrow(() -> new RuntimeException("Sector not found"));
 
-            // Associer les entités à l'offre d'emploi
             jobOffer.setCompany(company);
             jobOffer.setCategoryOffer(categoryOffer);
             jobOffer.setCity(city);
             jobOffer.setSector(sector);
-
-            // Définir la date de création
             jobOffer.setDateCreation(new Date());
 
-            // Définir une date de clôture par défaut (30 jours)
             if (jobOffer.getClosingDate() == null) {
                 Calendar calendar = Calendar.getInstance();
                 calendar.add(Calendar.DAY_OF_MONTH, 30);
                 jobOffer.setClosingDate(calendar.getTime());
             }
 
-            // Sauvegarder l'offre
             JobOffer savedJobOffer = jobOfferRepository.save(jobOffer);
 
-            // Réponse de succès
+            // 📢 Envoi d'une notification au SuperAdmin si l'offre est créée par un Admin
+            if (optionalAdmin.isPresent()) {
+                List<SuperAdmin> superAdmins = superadminRepository.findAll();
+                for (SuperAdmin superAdmin : superAdmins) {
+                    Notification notification = new Notification();
+                    notification.setRecipient(superAdmin);
+                    notification.setMessage("Une nouvelle offre '" + jobOffer.getTitle() + "' a été créée et nécessite votre validation.");
+                    notification.setTitle("Nouvelle Offre d'Emploi");
+                    notification.setLevel(NotificationLevel.INFO);
+                    notification.setType(NotificationType.JOB_PENDING);
+                    notification.setRead(false);
+                    notificationRepository.save(notification);
+                }
+            }
+
             Map<String, Object> response = new HashMap<>();
             response.put("message", "JobOffer created successfully!");
             response.put("jobOffer", savedJobOffer);
@@ -104,7 +106,6 @@ public class JobOfferServiceIMPL implements JobOfferService {
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
-            // Réponse d'erreur
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("message", "Error: " + e.getMessage());
             errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
@@ -112,6 +113,7 @@ public class JobOfferServiceIMPL implements JobOfferService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
+
 
     public ResponseEntity<?> getAll() {
         try {
@@ -449,6 +451,18 @@ public class JobOfferServiceIMPL implements JobOfferService {
             jobOffer.setStatus(JobStatus.OPEN);
             jobOfferRepository.save(jobOffer);
 
+            // 📢 Envoi d'une notification à l'Admin
+            if (jobOffer.getAdmin() != null) {
+                Notification notification = new Notification();
+                notification.setRecipient(jobOffer.getAdmin());
+                notification.setMessage("Votre offre '" + jobOffer.getTitle() + "' a été validée par le SuperAdmin et est maintenant ouverte.");
+                notification.setTitle("Offre Validée");
+                notification.setLevel(NotificationLevel.INFO);
+                notification.setType(NotificationType.JOB_APPROVED);
+                notification.setRead(false);
+                notificationRepository.save(notification);
+            }
+
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Job offer marked as open successfully!");
             response.put("jobOffer", jobOffer);
@@ -463,6 +477,8 @@ public class JobOfferServiceIMPL implements JobOfferService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
+
+
 
     @Override
     public ResponseEntity<List<JobOffer>> searchJobOffers(String keyword) {

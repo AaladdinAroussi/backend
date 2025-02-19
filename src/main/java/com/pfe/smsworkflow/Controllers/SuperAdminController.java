@@ -2,6 +2,7 @@ package com.pfe.smsworkflow.Controllers;
 
 import com.pfe.smsworkflow.Models.*;
 import com.pfe.smsworkflow.Repository.SuperadminRepository;
+import com.pfe.smsworkflow.Repository.UsersRepository;
 import com.pfe.smsworkflow.Services.*;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,8 @@ import java.util.Optional;
 public class SuperAdminController {
     @Autowired
     private CandidatService candidatService;
+    @Autowired
+    private UsersRepository userRepository;
     @Autowired
     private SuperadminRepository superadminRepository;
     @Autowired
@@ -203,11 +206,24 @@ public class SuperAdminController {
         }
     }
     @PutMapping("update/{id}")
-    public ResponseEntity<?> updateSuperAdmin(@RequestParam SuperAdmin superAdmin, Long id) {
+    public ResponseEntity<?> updateSuperAdmin(@RequestBody SuperAdmin superAdmin,@PathVariable Long id) {
         try {
             SuperAdmin existingSuperAdmin = superadminRepository.findById(id)
                     .orElseThrow(() -> new EntityNotFoundException("SuperAdmin with ID " + id + " not found!"));
-
+            // Vérifiez l'unicité de l'email
+            if (superAdmin.getEmail() != null && !superAdmin.getEmail().equals(existingSuperAdmin.getEmail())) {
+                if (userRepository.existsByEmail(superAdmin.getEmail())) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(Map.of("message", "Email already in use!", "status", HttpStatus.BAD_REQUEST.value()));
+                }
+            }
+            // Vérifiez l'unicité du téléphone
+            if (superAdmin.getPhone() != null && !superAdmin.getPhone().equals(existingSuperAdmin.getPhone())) {
+                if (userRepository.existsByPhone(superAdmin.getPhone())) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(Map.of("message", "Phone number already in use!", "status", HttpStatus.BAD_REQUEST.value()));
+                }
+            }
             // Mise à jour des champs de SuperAdmin
             existingSuperAdmin.setFullName(superAdmin.getFullName() == null ? existingSuperAdmin.getFullName() : superAdmin.getFullName());
             existingSuperAdmin.setPhone(superAdmin.getPhone() == null ? existingSuperAdmin.getPhone() : superAdmin.getPhone());
