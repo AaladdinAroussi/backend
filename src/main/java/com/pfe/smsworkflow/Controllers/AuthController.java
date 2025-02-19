@@ -5,6 +5,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import com.pfe.smsworkflow.Models.*;
+import com.pfe.smsworkflow.Repository.SectorRepository;
 import com.pfe.smsworkflow.Repository.VerificationCodeRepository;
 import com.pfe.smsworkflow.Security.Services.RefreshTokenService;
 import com.pfe.smsworkflow.Security.Services.UserDetailsImpl;
@@ -45,10 +46,12 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
     @Autowired
     AuthenticationManager authenticationManager;
-//    @Autowired
+    //    @Autowired
 //    private JavaMailSender emailSender ;
     @Autowired
     UsersRepository userRepository;
+    @Autowired
+    SectorRepository sectorRepository;
     @Autowired
     private UserDetailsService userDetailsService;
     @Autowired
@@ -76,37 +79,46 @@ public class AuthController {
 
 
 
-    @PostMapping("/signupCandidat")
-    public ResponseEntity<?> registerCandidat(@Valid @RequestBody SignupRequest signUpRequest) {
-        // Vérifier si le numéro de téléphone existe déjà
-        if (userRepository.existsByPhone(signUpRequest.getPhone())) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Phone number is already in use!"));
+        @PostMapping("/signupCandidat")
+        public ResponseEntity<?> registerCandidat(@Valid @RequestBody SignupRequest signUpRequest) {
+            // Vérifier si le numéro de téléphone existe déjà
+            if (userRepository.existsByPhone(signUpRequest.getPhone())) {
+                return ResponseEntity.badRequest().body(new MessageResponse("Error: Phone number is already in use!"));
+            }
+            if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+                return ResponseEntity.badRequest().body(new MessageResponse("Error: Email is already in use!"));
+            }
+
+            // Créer un candidat
+            Candidat candidat = new Candidat();
+            candidat.setFullName(signUpRequest.getFullName()); // Ajoutez cette ligne
+            candidat.setEmail(signUpRequest.getEmail());
+            candidat.setPassword(encoder.encode(signUpRequest.getPassword()));
+            candidat.setPhone(signUpRequest.getPhone());
+            // Assigner le secteur
+            // Vérifier si le secteur existe déjà
+
+            if (signUpRequest.getSector() != null) {
+                Sector sector = sectorRepository.findById(signUpRequest.getSector())
+                        .orElseThrow(() -> new RuntimeException("Error: Sector not found!"));
+                candidat.setSector(sector); // Assigner le secteur récupéré
+            }
+            // Assigner l'expérience
+            candidat.setExperience(signUpRequest.getExperience());
+            // Vérifier si le rôle ROLE_CANDIDAT existe
+            Role roleCandidat = roleRepository.findByName(ERole.ROLE_CANDIDAT)
+                    .orElseThrow(() -> new RuntimeException("Error: Role CANDIDAT not found!"));
+
+            // Assigner automatiquement le rôle CANDIDAT
+            Set<Role> roles = new HashSet<>();
+            roles.add(roleCandidat);
+            candidat.setRoles(roles);  // ← Relation correctement assignée
+
+            // Sauvegarder le candidat (enregistre d'abord dans `users`, puis `candidat`)
+            userRepository.save(candidat);
+
+            return ResponseEntity.ok(new MessageResponse("Candidat registered successfully with ROLE_CANDIDAT!"));
         }
-        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Email is already in use!"));
-        }
-
-        // Créer un candidat
-        Candidat candidat = new Candidat();
-        candidat.setFullName(signUpRequest.getFullName()); // Ajoutez cette ligne
-        candidat.setEmail(signUpRequest.getEmail());
-        candidat.setPassword(encoder.encode(signUpRequest.getPassword()));
-        candidat.setPhone(signUpRequest.getPhone());
-
-        // Vérifier si le rôle ROLE_CANDIDAT existe
-        Role roleCandidat = roleRepository.findByName(ERole.ROLE_CANDIDAT)
-                .orElseThrow(() -> new RuntimeException("Error: Role CANDIDAT not found!"));
-
-        // Assigner automatiquement le rôle CANDIDAT
-        Set<Role> roles = new HashSet<>();
-        roles.add(roleCandidat);
-        candidat.setRoles(roles);  // ← Relation correctement assignée
-
-        // Sauvegarder le candidat (enregistre d'abord dans `users`, puis `candidat`)
-        userRepository.save(candidat);
-
-        return ResponseEntity.ok(new MessageResponse("Candidat registered successfully with ROLE_CANDIDAT!"));
-    }
     @PostMapping("/signupAdmin")
     public ResponseEntity<?> registerAdmin(@Valid @RequestBody SignupRequest signUpRequest) {
         // Vérifier si le numéro de téléphone existe déjà
@@ -306,7 +318,7 @@ public class AuthController {
 
 
 
-//    @GetMapping("/confirm")
+    //    @GetMapping("/confirm")
 //    public ResponseEntity<?> confirm(@RequestParam String email){
 //        User u = userRepository.findByEmail(email);
 //        if(u != null){

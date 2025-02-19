@@ -28,5 +28,7 @@ public class SignupRequest {
     private String password;
 
     private String phone;
+    private Long sector;
+    private int experience;
 
 }

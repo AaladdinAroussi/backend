@@ -6,6 +6,7 @@ import com.pfe.smsworkflow.Models.User;
 import com.pfe.smsworkflow.Repository.NotificationRepository;
 import com.pfe.smsworkflow.Repository.UsersRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,6 +19,9 @@ public class NotificationService {
     @Autowired
     private UsersRepository userRepository;
 
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
     public void createNotification(Long recipientId, String message, NotificationType type) {
         User recipient = userRepository.findById(recipientId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
@@ -29,6 +33,9 @@ public class NotificationService {
         notification.setRead(false);
 
         notificationRepository.save(notification);
+
+        // Envoi en temps réel via WebSockets
+        messagingTemplate.convertAndSend("/topic/notifications/" + recipientId, notification);
     }
 
     public List<Notification> getNotificationsForUser(Long userId) {

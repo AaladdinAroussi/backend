@@ -1,7 +1,7 @@
 package com.pfe.smsworkflow.Models;
 
 public enum NotificationLevel {
-    LEVEL ,
-    INFO,
-    WARNING
+    INFO,   // Notification informative
+    WARNING, // Avertissement
+    CRITICAL // Notification critique ou urgente
 }

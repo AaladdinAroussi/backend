@@ -30,7 +30,7 @@ public class Candidat extends User{
     @JoinColumn(name = "level_id")
     private Level level;
 
-    @ManyToOne(cascade = CascadeType.PERSIST)
+    @ManyToOne(cascade = CascadeType.MERGE)
     @JoinColumn(name = "sector_id")
     private Sector sector;
 

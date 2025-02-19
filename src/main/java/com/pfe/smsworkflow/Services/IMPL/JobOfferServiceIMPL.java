@@ -88,14 +88,11 @@ public class JobOfferServiceIMPL implements JobOfferService {
             if (optionalAdmin.isPresent()) {
                 List<SuperAdmin> superAdmins = superadminRepository.findAll();
                 for (SuperAdmin superAdmin : superAdmins) {
-                    Notification notification = new Notification();
-                    notification.setRecipient(superAdmin);
-                    notification.setMessage("Une nouvelle offre '" + jobOffer.getTitle() + "' a été créée et nécessite votre validation.");
-                    notification.setTitle("Nouvelle Offre d'Emploi");
-                    notification.setLevel(NotificationLevel.INFO);
-                    notification.setType(NotificationType.JOB_PENDING);
-                    notification.setRead(false);
-                    notificationRepository.save(notification);
+                    notificationService.createNotification(
+                            superAdmin.getId(),
+                            "Une nouvelle offre '" + jobOffer.getTitle() + "' a été créée et nécessite votre validation.",
+                            NotificationType.JOB_PENDING
+                    );
                 }
             }
 
@@ -113,6 +110,7 @@ public class JobOfferServiceIMPL implements JobOfferService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
+
 
 
     public ResponseEntity<?> getAll() {
@@ -451,16 +449,13 @@ public class JobOfferServiceIMPL implements JobOfferService {
             jobOffer.setStatus(JobStatus.OPEN);
             jobOfferRepository.save(jobOffer);
 
-            // 📢 Envoi d'une notification à l'Admin
+            // 📢 Envoi d'une notification à l'Admin via WebSockets
             if (jobOffer.getAdmin() != null) {
-                Notification notification = new Notification();
-                notification.setRecipient(jobOffer.getAdmin());
-                notification.setMessage("Votre offre '" + jobOffer.getTitle() + "' a été validée par le SuperAdmin et est maintenant ouverte.");
-                notification.setTitle("Offre Validée");
-                notification.setLevel(NotificationLevel.INFO);
-                notification.setType(NotificationType.JOB_APPROVED);
-                notification.setRead(false);
-                notificationRepository.save(notification);
+                notificationService.createNotification(
+                        jobOffer.getAdmin().getId(),
+                        "Votre offre '" + jobOffer.getTitle() + "' a été validée par le SuperAdmin et est maintenant ouverte.",
+                        NotificationType.JOB_APPROVED
+                );
             }
 
             Map<String, Object> response = new HashMap<>();
@@ -477,6 +472,7 @@ public class JobOfferServiceIMPL implements JobOfferService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
+
 
 
 
