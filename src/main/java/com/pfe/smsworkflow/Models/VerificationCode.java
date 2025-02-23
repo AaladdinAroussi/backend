@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Date;
+
 @Setter
 @Getter
 @Entity
@@ -27,6 +29,13 @@ public class VerificationCode extends BaseEntity{
     @Enumerated(EnumType.ORDINAL) // Store the ordinal value in the database
     @Column(name = "code_status", nullable = false)
     private CodeStatus codeStatus; // 0 = not sent, 1 = sent,resent =  2
+    @Column(name = "sms_id")
+    private Long smsId;
+    @Column(name = "dlr")
+    private String dlr;
+    @Column(name = "date_dlr")
+    private Date dateDlr;
+
     public VerificationCode() {
     }
     public boolean isCodeValid(String inputCode) {

@@ -21,4 +21,6 @@ public class Admin extends User {
     @JsonIgnore
     @OneToMany(mappedBy = "admin", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Set<VerificationCode> verificationCodes = new HashSet<>();
+    //one to one
+
 }

@@ -2,11 +2,13 @@ package com.pfe.smsworkflow.Services.IMPL;
 
 import com.pfe.smsworkflow.Models.*;
 import com.pfe.smsworkflow.Repository.*;
+import com.pfe.smsworkflow.Security.Services.RecordNotFoundException;
 import com.pfe.smsworkflow.Services.JobOfferService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
 
@@ -19,6 +21,8 @@ import java.util.stream.Collectors;
 public class JobOfferServiceIMPL implements JobOfferService {
     @Autowired
     private JobOfferRepository jobOfferRepository;
+    @Autowired
+    private SendSmsRepository sendSmsRepository;
     @Autowired
     private SectorRepository sectorRepository;
     @Autowired
@@ -33,6 +37,8 @@ public class JobOfferServiceIMPL implements JobOfferService {
     private SuperadminRepository superadminRepository;
     @Autowired
     private AdminRepository adminRepository;
+    @Autowired
+    private SmsService smsService;
     @Autowired
     private NotificationRepository notificationRepository;
     @Autowired
@@ -439,7 +445,60 @@ public class JobOfferServiceIMPL implements JobOfferService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
+    /*@Scheduled(fixedRate = 300000) // Run every 5 minutes
+    public void updateSmsRecords() {
+        List<SendSms> smsRecords = sendSmsRepository.findByStatus(0); // Assuming 0 means not delivered
+        for (SendSms sms : smsRecords) {
+            if (sms.getSms_id() != null) {
+                SmsResponse dlrResponse = smsService.getDlr(sms.getSms_id());
+                if (dlrResponse.isSuccess()) {
+                    sms.setDlr(Dlr.valueOf(dlrResponse.getDlr()));
+                    sms.setDate_dlr(dlrResponse.getDateDlr()); // Set the DLR date from the response
+                    sms.setStatus(1); // Update status to delivered (assuming 1 means delivered)
+                    sendSmsRepository.save(sms);
+                } else {
+                    // Log the issue if DLR retrieval fails
+                    System.out.println("Erreur lors de la récupération du DLR pour l'SMS ID: " + sms.getSms_id());
+                }
+            }
+        }
+    }*/
+    @Override
+    public ResponseEntity<?> notifyCandidates(Long jobOfferId) {
+        JobOffer jobOffer = jobOfferRepository.findById(jobOfferId)
+                .orElseThrow(() -> new RecordNotFoundException("Job offer not found with id: " + jobOfferId));
 
+        Set<Candidat> candidates = candidatRepository.findBySector(jobOffer.getSector());
+        if (candidates.isEmpty()) {
+            System.out.println("No candidates found in the sector for job offer: " + jobOffer.getTitle());
+        } else {
+            for (Candidat candidate : candidates) {
+                String message = "Une nouvelle offre d'emploi a été approuvée : " + jobOffer.getTitle() + ". Consultez-la sur notre site.";
+                SmsResponse smsResponse = smsService.sendSms(candidate.getPhone(), message);
+
+                SendSms sendSms = new SendSms();
+                sendSms.setSms_id(smsResponse.getSmsId());
+                sendSms.setText(message);
+                sendSms.setPhone(candidate.getPhone());
+                sendSms.setStatus(smsResponse.isSuccess() ? 1 : 0);
+                sendSms.setDate_envoi(new Date());
+
+                sendSmsRepository.save(sendSms);
+
+                if (smsResponse.isSuccess()) {
+                    System.out.println("SMS sent to candidate: " + candidate.getPhone());
+                } else {
+                    System.out.println("Failed to send SMS to candidate: " + candidate.getPhone());
+                }
+            }
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Candidates notified successfully!");
+        response.put("status", HttpStatus.OK.value());
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
     @Override
     public ResponseEntity<?> markJobAsOpen(Long id) {
         try {
@@ -472,7 +531,6 @@ public class JobOfferServiceIMPL implements JobOfferService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
-
 
 
 

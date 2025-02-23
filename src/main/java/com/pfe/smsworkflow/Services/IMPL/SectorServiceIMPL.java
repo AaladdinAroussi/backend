@@ -125,7 +125,12 @@ public class SectorServiceIMPL implements SectorService {
             if (sector.getName() != null) {
                 existingSector.setName(sector.getName());  // Update only the name if provided
             }
-
+            if (sector.getDescription() != null) {
+                existingSector.setDescription(sector.getDescription());
+            }
+            if (sector.getCategoryIds() != null) {
+                existingSector.setCategoryIds(sector.getCategoryIds());
+            }
             Sector updatedSector = sectorRepository.save(existingSector);
             return new ResponseEntity<>(updatedSector, HttpStatus.OK);  // Return 200 OK with the updated sector
         } catch (Exception e) {

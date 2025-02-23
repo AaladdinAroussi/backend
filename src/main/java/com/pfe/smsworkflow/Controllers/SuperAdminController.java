@@ -8,7 +8,6 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -44,6 +43,11 @@ public class SuperAdminController {
     @Autowired
     private UserManagementService userManagementService;
 
+
+    @PostMapping("notifyCandidates/{jobOfferId}")
+    public ResponseEntity<?> notifyCandidates(@PathVariable Long jobOfferId) {
+        return jobOfferService.notifyCandidates(jobOfferId);
+    }
     // LEVEL ENDPOINTS
     @PostMapping("saveLevel")
     public ResponseEntity<?> createLevel(@RequestBody Level level, @RequestParam Long superadminId) {

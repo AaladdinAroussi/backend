@@ -9,5 +9,6 @@ public interface UserService {
     void resendVerificationCode(Long userId);
     ResponseEntity<User> getUserByEmail(String email);
     ResponseEntity<User> getUserByPhone(String phone);
-
+    ResponseEntity<String> existsByPhone(String phone);
+    ResponseEntity<String> existsByEmail(String email);
 }

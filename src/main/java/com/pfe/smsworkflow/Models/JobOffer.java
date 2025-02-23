@@ -5,7 +5,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -59,4 +61,7 @@ public class JobOffer extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "sector_id", nullable = false)
     private Sector sector;
+
+    @OneToMany(mappedBy = "jobOffer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<SendSms> sendSms = new ArrayList<>();
 }

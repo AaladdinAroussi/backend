@@ -30,6 +30,11 @@ public class CommonController {
     private CategoryOfferService categoryOfferService;
     @Autowired
     private CandidatService candidatService;
+
+
+
+
+
     // CATEGORYOFFER ENDPOINTS
     @GetMapping("allCategoryOffers")
     public ResponseEntity<?> getAllCategoryOffers() {

@@ -26,6 +26,22 @@ public class UserServiceIMPL implements UserService {
     @Autowired
     private UsersRepository userRepository;
 
+
+    @Override
+    public ResponseEntity<String> existsByPhone(String phone) {
+        if (userRepository.existsByPhone(phone)) {
+            return ResponseEntity.badRequest().body("Phone number is already in use!");
+        }
+        return ResponseEntity.ok("Phone number is available.");
+    }
+    @Override
+    public ResponseEntity<String> existsByEmail(String email) {
+        if (userRepository.existsByEmail(email)) {
+            return ResponseEntity.badRequest().body("Email is already in use!");
+        }
+        return ResponseEntity.ok("Email is available.");
+    }
+
     @Override
     public ResponseEntity<User> getUserByPhone(String phone) {
         Optional<User> userOptional = userRepository.findByPhone(phone); // This finds the user by phone and returns an Optional

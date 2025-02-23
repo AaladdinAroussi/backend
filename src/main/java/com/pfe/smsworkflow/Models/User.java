@@ -66,4 +66,9 @@ public class User  extends BaseEntity{
         }
         return false; // Code is invalid
     }
+    @Column(name = "verification_code")
+    private String verificationCode;
+
+
+
 }
