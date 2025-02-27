@@ -1,5 +1,6 @@
 package com.pfe.smsworkflow.Models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,11 +31,8 @@ public class SendSms {
 
     private Date date_dlr ;
 
-    @ManyToOne
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "offer_id")
     private JobOffer jobOffer;
-
-
-
-
 }

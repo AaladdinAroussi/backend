@@ -6,6 +6,7 @@ import com.pfe.smsworkflow.Models.User;
 import com.pfe.smsworkflow.Repository.NotificationRepository;
 import com.pfe.smsworkflow.Repository.UsersRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
@@ -37,7 +38,6 @@ public class NotificationService {
         // Envoi en temps réel via WebSockets
         messagingTemplate.convertAndSend("/topic/notifications/" + recipientId, notification);
     }
-
     public List<Notification> getNotificationsForUser(Long userId) {
         return notificationRepository.findByRecipientId(userId);
     }

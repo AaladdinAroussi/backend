@@ -13,7 +13,7 @@ public interface JobOfferService {
     public ResponseEntity<?> updateJobOffer(JobOffer jobOffer, Long id, Long adminId, Long companyId, Long categoryOfferId, Long cityId);
     ResponseEntity<?> getById(Long id);
     ResponseEntity<?> delete(Long id);
-    ResponseEntity<?> notifyCandidates(Long jobOfferId);
+
 
 
     ResponseEntity<?> getActiveJobOffers(); //Récupérer les offres actives uniquement( statut "OPEN"&"PENDING")//superadmin

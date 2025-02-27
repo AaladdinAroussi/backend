@@ -44,6 +44,7 @@ public class JobOfferServiceIMPL implements JobOfferService {
     @Autowired
     private NotificationService notificationService;  // Ajout du service de notification
 
+
     public ResponseEntity<?> create(JobOffer jobOffer, Long userId, Long companyId, Long categoryOfferId, Long cityId, Long sectorId) {
         try {
             Optional<Admin> optionalAdmin = adminRepository.findById(userId);
@@ -463,42 +464,7 @@ public class JobOfferServiceIMPL implements JobOfferService {
             }
         }
     }*/
-    @Override
-    public ResponseEntity<?> notifyCandidates(Long jobOfferId) {
-        JobOffer jobOffer = jobOfferRepository.findById(jobOfferId)
-                .orElseThrow(() -> new RecordNotFoundException("Job offer not found with id: " + jobOfferId));
 
-        Set<Candidat> candidates = candidatRepository.findBySector(jobOffer.getSector());
-        if (candidates.isEmpty()) {
-            System.out.println("No candidates found in the sector for job offer: " + jobOffer.getTitle());
-        } else {
-            for (Candidat candidate : candidates) {
-                String message = "Une nouvelle offre d'emploi a été approuvée : " + jobOffer.getTitle() + ". Consultez-la sur notre site.";
-                SmsResponse smsResponse = smsService.sendSms(candidate.getPhone(), message);
-
-                SendSms sendSms = new SendSms();
-                sendSms.setSms_id(smsResponse.getSmsId());
-                sendSms.setText(message);
-                sendSms.setPhone(candidate.getPhone());
-                sendSms.setStatus(smsResponse.isSuccess() ? 1 : 0);
-                sendSms.setDate_envoi(new Date());
-
-                sendSmsRepository.save(sendSms);
-
-                if (smsResponse.isSuccess()) {
-                    System.out.println("SMS sent to candidate: " + candidate.getPhone());
-                } else {
-                    System.out.println("Failed to send SMS to candidate: " + candidate.getPhone());
-                }
-            }
-        }
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Candidates notified successfully!");
-        response.put("status", HttpStatus.OK.value());
-
-        return ResponseEntity.status(HttpStatus.OK).body(response);
-    }
     @Override
     public ResponseEntity<?> markJobAsOpen(Long id) {
         try {

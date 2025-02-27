@@ -4,6 +4,7 @@ import com.pfe.smsworkflow.Models.*;
 import com.pfe.smsworkflow.Repository.SuperadminRepository;
 import com.pfe.smsworkflow.Repository.UsersRepository;
 import com.pfe.smsworkflow.Services.*;
+import com.pfe.smsworkflow.Services.IMPL.SmsService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -42,11 +43,13 @@ public class SuperAdminController {
     private CompanyService companyService;
     @Autowired
     private UserManagementService userManagementService;
+    @Autowired
+    private SmsService smsService ;
 
 
     @PostMapping("notifyCandidates/{jobOfferId}")
     public ResponseEntity<?> notifyCandidates(@PathVariable Long jobOfferId) {
-        return jobOfferService.notifyCandidates(jobOfferId);
+        return smsService.notifyCandidates(jobOfferId);
     }
     // LEVEL ENDPOINTS
     @PostMapping("saveLevel")

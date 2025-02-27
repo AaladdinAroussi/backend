@@ -39,4 +39,14 @@ public class SmsResponse {
     public Date getDateDlr() {
         return dateDlr;
     }
+
+    @Override
+    public String toString() {
+        return "SmsResponse{" +
+                "success=" + success +
+                ", smsId=" + smsId +
+                ", dlr='" + dlr + '\'' +
+                ", dateDlr=" + dateDlr +
+                '}';
+    }
 }
